@@ -12,12 +12,9 @@ const controllerVerificationEmail = asyncHandler(async (user, fn) => {
 });
 
 const controllerAuthLocalLogin = asyncHandler(async (req, res) => {
-	if (!req.isAuthenticated()) {
-		res.status(401).json({ success: false, message: "Authentication failed" });
-		return;
-	}
+	const { email, password } = req.body;
 	// Check if user exists , if no , throw an error else set a session
-	let user = await User.findOne({ email: req.user.email.toLowerCase(), provider: "local" });
+	let user = await User.findOne({ email: email.toLowerCase() });
 
 	if (!user) {
 		res.status(400);
@@ -25,7 +22,7 @@ const controllerAuthLocalLogin = asyncHandler(async (req, res) => {
 	}
 
 	// Check user's password
-	let valid = await user.comparePassword(req.user.password);
+	let valid = await user.comparePassword(password);
 	if (!valid) {
 		res.status(400);
 		throw new Error("Invalid login credentials. Please check your password and try again");
@@ -36,7 +33,8 @@ const controllerAuthLocalLogin = asyncHandler(async (req, res) => {
 		res.status(401);
 		throw new Error("Email is not verified , redirecting you to verify your email address");
 	}
-	req.session.user = { email: user.email, provider: user.provider, _id: user._id };
+
+	req.session.user = { email: user.email, id: user._id, balance: user?.balance, subscribed: user?.subscribed, fullname: user?.fullname };
 	res.status(200).json(req.session.user);
 });
 const controllerAuthLocalRegister = asyncHandler(async (req, res) => {
@@ -73,7 +71,7 @@ const controllerResetPassword = asyncHandler(async (req, res) => {
 		throw new Error("Please fill in all credentials");
 	}
 	// Find account
-	let account = await User.findOne({ email: email.toLowerCase(), provider: "local" });
+	let account = await User.findOne({ email: email.toLowerCase() });
 	if (!account) {
 		res.status(404);
 		throw new Error("Account does not exist");
@@ -88,42 +86,29 @@ const controllerResetPassword = asyncHandler(async (req, res) => {
 });
 
 const controllerChangePassword = asyncHandler(async (req, res) => {
-	let { email, code, password, newPassword } = req.body;
-	if (!email || !newPassword || (!code && !password)) {
+	let { email, password, newPassword } = req.body;
+	if (!email || !newPassword || !password) {
 		throw new Error("Missing required fields");
 	}
 	// Fetch user information
-	let account = await User.findOne({ email: email.toLowerCase(), provider: "local" });
+	let account = await User.findOne({ email: email.toLowerCase() });
 	if (!account) {
 		res.status(404);
 		throw new Error("Account does not exist");
 	}
 	let valid = false;
-	// If code , compare the codes and valid
-	if (code && !account.code) {
-		res.status(404);
-		throw new Error("The verification code has been used , request a new one through forgot password");
-	}
-	if (code) {
-		valid = code === account.code;
-	}
+
 	// If password , compare passwords and update valid
 	if (password && account.password) {
 		valid = await account.comparePassword(password);
 	}
 	if (!valid) {
 		res.status(404);
-		throw new Error(code ? "The verification code is invalid" : "The provided password is invalid");
+		throw new Error("The provided password is invalid");
 	}
 	await account.updatePassword(newPassword);
 	await account.save();
 
-	// Set session if it was a password reset
-	if (code) {
-		req.session.user = { email: account.email, provider: account.provider, _id: account._id };
-		res.status(200).json(req.session.user);
-		return;
-	}
 	res.status(200).json({ success: true });
 });
 
@@ -139,10 +124,10 @@ const controllerVerifyEmail = asyncHandler(async (req, res) => {
 	}
 
 	// Find user by email
-	let user = await User.findOne({ email: email.toLowerCase(), provider: "local" });
+	let user = await User.findOne({ email: email.toLowerCase() });
 	if (!user) {
 		res.status(400);
-		throw new Error("Email verificaton was unsuccessful");
+		throw new Error("User account not found");
 	}
 	if (!user.code && mode === "resetpassword") {
 		res.status(404);
@@ -162,38 +147,35 @@ const controllerVerifyEmail = asyncHandler(async (req, res) => {
 		return;
 	}
 	// Update verification status
-	await User.updateOne({ email: email.toLowerCase(), provider: "local" }, { $set: { verified: true }, $unset: { code: null } });
-	// Set session to user's data
-	req.session.user = {
-		displayName: user.displayName || "",
-		_id: user._id,
-		provider: user.provider,
-		email: user.email || "",
-	};
-	res.status(200).json({ ...req.session.user });
+	await User.updateOne({ email: email.toLowerCase() }, { $set: { verified: true }, $unset: { code: null } });
+
+	res.status(200).json({ success: true });
 });
 const controllerConfirmReset = asyncHandler(async (req, res) => {
-	let { email, code } = req.body;
-	if (!email || !code) {
+	let { email, code, newPassword } = req.body;
+	if (!email || !code || !newPassword) {
 		res.status(401);
 		throw new Error("Email verificaton was unsuccessful");
 	}
 
 	// Find user by email
-	let user = await User.findOne({ email: email.toLowerCase(), provider: "local" });
+	let user = await User.findOne({ email: email.toLowerCase() });
 	if (!user) {
 		res.status(400);
 		throw new Error("Email verificaton was unsuccessful");
 	}
 
 	// Confirm code
-	let valid = await user.compareCode(code);
+	let valid = code === user.code;
 	if (!valid) {
 		res.status(400);
 		throw new Error("Invalid code");
 	}
+	// Update password
+	await user.updatePassword(newPassword);
+	await user.save();
 
-	res.status(200).json({ success: true, code: user.code, email });
+	res.status(200).json({ success: true });
 });
 
 const controllerResendEmail = asyncHandler(async (req, res) => {
@@ -207,13 +189,11 @@ const controllerResendEmail = asyncHandler(async (req, res) => {
 		throw new Error("The provided credentials are invalid");
 	}
 
-	let account = await User.findOne({ email: email.toLowerCase(), provider: "local" });
+	let account = await User.findOne({ email: email.toLowerCase() });
 	if (!account) {
 		res.status(404);
 		throw new Error("Account does not exist");
 	}
-
-	console.log(mode);
 
 	await controllerVerificationEmail(account, mode === "accountverification" ? sendEmailVerificationEmail : sendPasswordResetEmail);
 	res.status(200).json({ success: true });
