@@ -21,14 +21,7 @@ const authRouter = express.Router();
 
 // authRouter.get("/verify", user, verifyAuth);
 
-authRouter.post(
-	"/login",
-	(req, res, next) => {
-		req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
-		next();
-	},
-	controllerAuthLocalLogin
-);
+authRouter.post("/login", controllerAuthLocalLogin);
 authRouter.post("/register", controllerAuthLocalRegister);
 authRouter.post("/resetPassword", controllerResetPassword);
 authRouter.post("/confirmReset", controllerConfirmReset);
@@ -36,7 +29,7 @@ authRouter.post("/changePassword", controllerChangePassword);
 authRouter.post("/verifyEmail", controllerVerifyEmail);
 authRouter.post("/resendEmail", controllerResendEmail);
 
-// authRouter.get("/user", user, controllerGetUser);
+authRouter.get("/user", user, controllerGetUser);
 
 authRouter.get("/logout", user, controllerLogoutUser);
 

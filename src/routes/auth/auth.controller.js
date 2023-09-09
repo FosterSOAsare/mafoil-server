@@ -35,6 +35,7 @@ const controllerAuthLocalLogin = asyncHandler(async (req, res) => {
 	}
 
 	req.session.user = { email: user.email, id: user._id, balance: user?.balance, subscribed: user?.subscribed, fullname: user?.fullname };
+	req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
 	res.status(200).json(req.session.user);
 });
 const controllerAuthLocalRegister = asyncHandler(async (req, res) => {

@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
-const session = require('express-session')
+const session = require("express-session");
 
 const error = require("./middlewares/error.middleware");
 
@@ -18,12 +18,13 @@ let initialObj = {
 	cookie: {
 		httpOnly: true,
 		sameSite: "strict",
+		secure: process.env?.NODE_ENV === "production",
 	},
 };
-app.use(session(initialObj));
 
 app.use(cors());
 app.use(morgan("combined"));
+app.use(session(initialObj));
 app.use("/api", appRouter);
 
 app.get("/", (req, res) => {
