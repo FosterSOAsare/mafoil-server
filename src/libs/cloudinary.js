@@ -12,18 +12,14 @@ cloudinary.v2.config({
 	secure: true,
 });
 
-async function getSecuredUrl(file, folder, public_id, resource_type = "image") {
+async function getSecuredUrl(file) {
 	const extName = path.extname(file.originalname).toString();
 	let format = extName.replace(".", "");
-	console.log(format);
 	const file64 = parser.format(extName, file.buffer);
 
 	let res = {};
-	if (public_id) {
-		res = await cloudinary.v2.uploader.upload(file64.content, { use_filename: true, format, resource_type: resource_type, public_id });
-	} else {
-		res = await cloudinary.v2.uploader.upload(file64.content, { folder: folder, format, resource_type: resource_type, use_filename: true });
-	}
+
+	res = await cloudinary.v2.uploader.upload(file64.content, { folder: "mafoil", format, use_filename: true });
 
 	return { public_id: res.public_id, url: res.secure_url };
 }
@@ -32,5 +28,9 @@ async function deleteFile(public_id) {
 	await cloudinary.uploader.destroy(public_id);
 	return true;
 }
+const randImageName = (fileType, bytes = 32) => {
+	let ext = fileType.split("/")[1];
+	return crypto.randomBytes(bytes).toString("hex") + "." + ext;
+};
 
-module.exports = { getSecuredUrl, deleteFile };
+module.exports = { getSecuredUrl, deleteFile, randImageName };
