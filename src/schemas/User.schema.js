@@ -23,8 +23,9 @@ const userSchema = mongoose.Schema(
 		fullname: {
 			type: String,
 		},
-		customer_id: {
-			type: String,
+		referrer: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "User",
 		},
 		subscribed: {
 			type: Boolean,
@@ -33,6 +34,10 @@ const userSchema = mongoose.Schema(
 		balance: {
 			type: Number,
 			default: 0,
+		},
+		activated: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	{

@@ -4,7 +4,7 @@ const path = require("path");
 require("dotenv").config();
 const nodemailer = require("nodemailer");
 
-const sendEmail = asyncHandler(async (subject, message, to, reply_to, sender) => {
+const sendEmail = asyncHandler(async (subject, message, to, reply_to) => {
 	let transporter = nodemailer.createTransport({
 		host: process.env.SMTP_HOST,
 		port: 465,
@@ -18,12 +18,13 @@ const sendEmail = asyncHandler(async (subject, message, to, reply_to, sender) =>
 		},
 	});
 	await transporter.sendMail({
-		from: `${sender === "xennol" ? "Xennol" : "Procvcreator"} <${process.env.EMAIL_ADDRESS}>`,
+		from: `Mail.fo <${process.env.EMAIL_ADDRESS}>`,
 		to: to,
 		subject: subject,
 		html: message,
 		replyTo: reply_to ? reply_to : "",
 	});
+	console.log("Mail successfull sent");
 	return { success: true };
 });
 

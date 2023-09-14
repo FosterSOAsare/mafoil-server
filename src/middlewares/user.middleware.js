@@ -10,8 +10,14 @@ const user = asyncHandler(async (req, res, next) => {
 		res.status(401);
 		throw new Error("User not authorized");
 	}
-	let response = await User.findOne({ _id: req.session.user._id });
-	req.session.user = { ...req.session.user, subscribed: true };
+	// let response = await User.findOne({ _id: req.session.user._id });
+	// if (!response) {
+	// 	await req.session.destroy();
+	// 	res.status(401);
+	// 	throw new Error("User not authorized");
+	// }
+	// const { email, fullname, activated, _id, balance, subscribed } = response;
+	// req.session.user = { email, fullname, activated, id: _id, balance, subscribed };
 	next();
 });
 
