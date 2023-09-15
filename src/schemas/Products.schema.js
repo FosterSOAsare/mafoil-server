@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 
+const imagesSchema = { public_id: String, url: String };
 const productsSchema = mongoose.Schema(
 	{
 		name: {
@@ -32,7 +33,7 @@ const productsSchema = mongoose.Schema(
 			type: String,
 		},
 		images: {
-			type: [{ public_id: String, url: String }],
+			type: [imagesSchema],
 		},
 	},
 	{
