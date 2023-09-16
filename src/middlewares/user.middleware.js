@@ -3,7 +3,13 @@ const User = require("../schemas/User.schema");
 
 const user = asyncHandler(async (req, res, next) => {
 	// req.session.user = {
-	// 	_id: "647afeaf8309c6c8268eb26b",
+	// 	email: "asare4ster@gmail.com",
+	// 	fullname: "Asare Foster",
+	// 	activated: false,
+	// 	_id: "64fa60388604b60b37ab4901",
+	// 	balance: 0,
+	// 	subscribed: false,
+	// 	is_admin: false,
 	// };
 
 	if (!req?.session?.user) {
