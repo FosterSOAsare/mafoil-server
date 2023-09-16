@@ -12,6 +12,10 @@ const getUserWishList = asyncHandler(async (req, res) => {
 	const userId = req.session.user._id;
 	let wishlist = await WishList.findOne({ user: userId });
 
+	if (!wishlist) {
+		res.status(200).json([]);
+		return;
+	}
 	let populatedWishList = await Promise.all(
 		wishlist.wishlist.map((item) => {
 			return Product.findOne({ _id: item }, { __v: 0 });
