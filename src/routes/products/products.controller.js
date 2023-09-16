@@ -17,6 +17,12 @@ const getProducts = asyncHandler(async (req, res) => {
 
 	res.status(200).json({ data: response, nextPage: totalCount > response.length + (page - 1) * 12 });
 });
+
+const fetchRecommendations = asyncHandler(async (category, slugname) => {
+	let recommendations = await Products.find({ category: category, slugname: { $not: { $eq: slugname } } }).limit(4);
+	recommendations = recommendations.map((re) => ({ ...re?._doc, rating: 0, totalRatings: 0 }));
+	return recommendations;
+});
 const getAProduct = asyncHandler(async (req, res) => {
 	const { slugname } = req.params;
 
@@ -28,7 +34,8 @@ const getAProduct = asyncHandler(async (req, res) => {
 	}
 	product = product?._doc;
 
-	let recommendations = await Products.find({ category: product?.category }).limit(4);
+	// Fetch recommendations
+	const recommendations = await fetchRecommendations(product?.category, product?.slugname);
 
 	res.status(200).json({ product: { ...product, rating: 0, totalRatings: 0 }, recommendations });
 });

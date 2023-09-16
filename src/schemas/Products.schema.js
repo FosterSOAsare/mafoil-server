@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const imagesSchema = { public_id: String, url: String };
+const imagesSchema = mongoose.Schema({ public_id: String, url: String }, { _id: false });
 const productsSchema = mongoose.Schema(
 	{
 		name: {
