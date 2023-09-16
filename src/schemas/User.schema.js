@@ -4,11 +4,11 @@ const bcrypt = require("bcrypt");
 const userSchema = mongoose.Schema(
 	{
 		email: {
-			required: false,
+			required: true,
 			type: String,
 		},
 		password: {
-			required: false,
+			required: true,
 			type: String,
 		},
 		code: {
@@ -22,9 +22,11 @@ const userSchema = mongoose.Schema(
 		},
 		fullname: {
 			type: String,
+			required: true,
 		},
-		customer_id: {
-			type: String,
+		referrer: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "User",
 		},
 		subscribed: {
 			type: Boolean,
@@ -33,6 +35,10 @@ const userSchema = mongoose.Schema(
 		balance: {
 			type: Number,
 			default: 0,
+		},
+		activated: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	{

@@ -34,16 +34,17 @@ const controllerAuthLocalLogin = asyncHandler(async (req, res) => {
 		throw new Error("Email is not verified , redirecting you to verify your email address");
 	}
 
-	req.session.user = { email: user.email, id: user._id, balance: user?.balance, subscribed: user?.subscribed, fullname: user?.fullname };
+	const { fullname, activated, _id, balance, subscribed } = user;
+	req.session.user = { email, fullname, activated, _id, balance, subscribed };
 	req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
 	res.status(200).json(req.session.user);
 });
 const controllerAuthLocalRegister = asyncHandler(async (req, res) => {
-	let { email, password, fullname } = req.body;
+	let { email, password, fullname, referrer } = req.body;
 
 	if (!email || !password || !fullname) {
-		throw new Error("Please provide all  credentials");
 		res.status(400);
+		throw new Error("Please provide all  credentials");
 	}
 	// Check if the user already exists
 	let user = await User.findOne({ email: email.toLowerCase() });
@@ -51,8 +52,15 @@ const controllerAuthLocalRegister = asyncHandler(async (req, res) => {
 		res.status(400);
 		throw new Error("User already exists , please sign in");
 	}
-	// Create new user
-	user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: false });
+	// Create new user based on referrer
+	try {
+		await User.findOne({ _id: referrer });
+		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: false, referrer });
+	} catch (e) {
+		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: false, referrer });
+	}
+
+	console.log(user);
 
 	// Send email for verification , set code and save user
 	user = await controllerVerificationEmail(user, sendEmailVerificationEmail);

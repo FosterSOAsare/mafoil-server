@@ -6,6 +6,6 @@ function createCloudinaryUpload() {
 	return upload;
 }
 
-const uploadToCloudinary = createCloudinaryUpload();
+const upload = createCloudinaryUpload();
 
-module.exports = { uploadToCloudinary };
+module.exports = { upload };
