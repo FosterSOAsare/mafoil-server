@@ -9,6 +9,7 @@ const cartRouter = express.Router();
 
 const getUserCart = asyncHandler(async (req, res) => {
 	const userId = req.session.user._id;
+
 	let cart = await Cart.findOne({ user: userId });
 
 	cart = cart?.cart ? cart?.cart : [];
@@ -25,6 +26,16 @@ const getUserCart = asyncHandler(async (req, res) => {
 const insertUserCart = asyncHandler(async (req, res) => {
 	let { cart: cartData } = req.body;
 	const userId = req.session.user._id;
+
+	if (!cartData || !Array.isArray(cartData)) {
+		throw new Error("Please include a cart to the request");
+	}
+	const valid = cartData.every((item) => {
+		return item.hasOwnProperty("id") && item.hasOwnProperty("count");
+	});
+	if (!valid) {
+		throw new Error("Please include a valid cart to the request");
+	}
 	const cart = await Cart.findOne({ user: userId });
 
 	cartData = cartData.map((item) => ({ itemId: item.id, count: item.count }));

@@ -18,12 +18,22 @@ const getUserWishList = asyncHandler(async (req, res) => {
 		})
 	);
 	// Add ratings
+
 	populatedWishList = populatedWishList.map((item, index) => ({ ...item?._doc, rating: 0, totalRatings: 0 }));
 	res.status(200).json(populatedWishList);
 });
 const insertUserWishlist = asyncHandler(async (req, res) => {
 	let { wishlist: wishlistData } = req.body;
 	const userId = req.session.user._id;
+	if (!wishlistData || !Array.isArray(wishlistData)) {
+		throw new Error("Please include a wishlist to the request");
+	}
+	const valid = wishlistData.every((item) => {
+		return typeof item === "string";
+	});
+	if (!valid) {
+		throw new Error("Please include a valid wishlist to the request");
+	}
 	const wishlist = await WishList.findOne({ user: userId });
 
 	if (wishlist) {
