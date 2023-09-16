@@ -106,4 +106,14 @@ const createAProduct = asyncHandler(async (req, res) => {
 	const response = await Products.create({ name, price, category, store, long_desc, short_desc, slugname, images });
 	res.status(200).json({ slugname: response?.slugname });
 });
-module.exports = { getProducts, getAProduct, deleteAProduct, updateAProduct, createAProduct, getProductForEdit };
+
+const fetchCategoriesInfo = asyncHandler(async (req, res) => {
+	let all = await Products.countDocuments();
+	let cloth = await Products.countDocuments({ category: "cloth" });
+	let shoe = await Products.countDocuments({ category: "shoe" });
+	let bag = await Products.countDocuments({ category: "bag" });
+	let accessories = await Products.countDocuments({ category: "accessories" });
+
+	res.status(200).json({ cloth, shoe, bag, accessories, all });
+});
+module.exports = { getProducts, getAProduct, deleteAProduct, updateAProduct, createAProduct, getProductForEdit, fetchCategoriesInfo };
