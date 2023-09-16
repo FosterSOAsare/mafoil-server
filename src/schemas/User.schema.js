@@ -40,6 +40,11 @@ const userSchema = mongoose.Schema(
 			type: Boolean,
 			default: false,
 		},
+		is_admin: {
+			type: Boolean,
+			default: false,
+			immutable: true,
+		},
 	},
 	{
 		timestamps: true,
