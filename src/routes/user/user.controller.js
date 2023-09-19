@@ -1,4 +1,5 @@
 const asyncHandler = require("express-async-handler");
+const mongoose = require("mongoose");
 const User = require("../../schemas/User.schema");
 
 const controllerGetUser = asyncHandler(async (req, res) => {
@@ -56,10 +57,36 @@ const controllerDeleteAccount = asyncHandler(async (req, res) => {
 	res.status(200).json({ success: true });
 });
 
+const controllerActivateAccount = asyncHandler(async (req, res) => {
+	let userId = req.session.user._id;
+
+	const user = await User.findOne({ _id: userId });
+	// Check if user has already activated their account
+	if (user.activated) {
+		res.status(400);
+		throw new Error("User has already activated their account");
+	}
+
+	if (user?.balance < 40) {
+		res.status(400);
+		throw new Error("You have insufficient funds to activate your account");
+	}
+
+	const session = await mongoose.startSession();
+	session.startTransaction();
+	const options = { session };
+	// Update balance
+	await User.updateOne({ _id: userId }, { $set: { activated: true }, $inc: { balance: -40 } }, options);
+	await session.commitTransaction();
+	session.endSession();
+	res.status(200).json({ success: true });
+});
+
 module.exports = {
 	controllerGetUser,
 	controllerUpdateUserData,
 	controllerUpdateUserPassword,
 	controllerDeleteAccount,
 	controllerUpdateNewsLetterSubscription,
+	controllerActivateAccount,
 };

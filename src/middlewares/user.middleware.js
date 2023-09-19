@@ -17,7 +17,7 @@ const user = asyncHandler(async (req, res, next) => {
 		throw new Error("User not authorized");
 	}
 	const { email, fullname, activated, _id, balance, subscribed } = response;
-	req.session.user = { email, fullname, activated, id: _id, balance, subscribed };
+	req.session.user = { email, fullname, activated, _id, balance, subscribed };
 	next();
 });
 
