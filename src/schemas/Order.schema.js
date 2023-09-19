@@ -15,17 +15,20 @@ const subSchema = mongoose.Schema(
 	{ _id: false }
 );
 
-const orderSchema = mongoose.Schema({
-	cart: [subSchema],
-	user: {
-		type: mongoose.Schema.Types.ObjectId,
-		ref: "User",
+const orderSchema = mongoose.Schema(
+	{
+		cart: [subSchema],
+		user: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "User",
+		},
+		endDate: Date,
+		avgProfitPercent: Number,
+		totalPrice: Number,
+		totalProfit: Number,
+		status: String,
 	},
-	endDate: Date,
-	avgProfitPercent: Number,
-	totalPrice: Number,
-	totalProfit: Number,
-	status: String,
-});
+	{ timestamps: true }
+);
 
 module.exports = mongoose.model("Order", orderSchema);
