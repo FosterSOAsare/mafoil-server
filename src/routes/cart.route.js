@@ -98,7 +98,7 @@ const checkoutCart = asyncHandler(async (req, res) => {
 	// TODO : Insert transaction
 	await Cart.deleteOne({ user: req.session.user._id });
 
-	res.status(200).json({ success: true });
+	res.status(200).json({ total: totalPrice, success: true });
 });
 cartRouter.get("/", user, getUserCart);
 cartRouter.get("/checkout", user, checkoutCart);
