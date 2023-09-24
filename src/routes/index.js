@@ -7,6 +7,7 @@ const filesRouter = require("./file.route");
 const cartRouter = require("./cart.route");
 const wishlistRouter = require("./wishlist.route");
 const ordersRouter = require("./orders.route");
+const transactionRouter = require("./transactions.route");
 
 const appRouter = express.Router();
 
@@ -17,5 +18,6 @@ appRouter.use("/files", filesRouter);
 appRouter.use("/cart", cartRouter);
 appRouter.use("/wishlist", wishlistRouter);
 appRouter.use("/orders", ordersRouter);
+appRouter.use("/transactions", transactionRouter);
 
 module.exports = appRouter;
