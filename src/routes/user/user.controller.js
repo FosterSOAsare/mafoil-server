@@ -1,6 +1,8 @@
 const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 const User = require("../../schemas/User.schema");
+const Transaction = require("../../schemas/Transaction.schema");
+const Notification = require("../../schemas/Notification.schema");
 
 const controllerGetUser = asyncHandler(async (req, res) => {
 	res.status(200).json(req?.session.user);
@@ -77,6 +79,8 @@ const controllerActivateAccount = asyncHandler(async (req, res) => {
 	const options = { session };
 	// Update balance
 	await User.updateOne({ _id: userId }, { $set: { activated: true }, $inc: { balance: -40 } }, options);
+	await Transaction.create({ type: "withdraw", amount: 40.0, status: "complete", desc: "Account activation fee", user: userId });
+	await Notification.create({ link: "/account/transactions", user: userId, desc: "Your account has been activated successfully." });
 	await session.commitTransaction();
 	session.endSession();
 	res.status(200).json({ success: true });

@@ -7,6 +7,8 @@ const Product = require("../schemas/Products.schema");
 const Order = require("../schemas/Order.schema");
 const User = require("../schemas/User.schema");
 const ordersRouter = express.Router();
+const Transaction = require("../schemas/Transaction.schema");
+const Notification = require("../schemas/Notification.schema");
 
 function createPercentage(createdAt, endDate) {
 	let today = new Date().getTime();
@@ -74,7 +76,6 @@ const cancelAnOrder = asyncHandler(async (req, res) => {
 		throw new Error("Finalized orders cannot be canceled");
 	}
 
-	console.log(order.user, req.session.user._id);
 	if (!order.user.equals(req.session.user._id)) {
 		res.status(404);
 		throw new Error("User is not authorized to perform this action");
@@ -89,17 +90,25 @@ const cancelAnOrder = asyncHandler(async (req, res) => {
 	// Cancel order
 
 	const session = await mongoose.startSession();
-	session.startTransaction();
-	const options = { session };
-	// Update balance
-	await Order.updateOne({ _id: req.params.orderId }, { $set: { status: "cancelled" } }, options);
-	// Add new balance
-	await User.updateOne({ _id: order?.user }, { $inc: { balance: order?.totalPrice } });
-	// Add a transaction for refund . TODO
-	await session.commitTransaction();
-	session.endSession();
-
-	res.status(200).json({ success: true });
+	try {
+		session.startTransaction();
+		const options = { session };
+		// Update balance
+		await Order.updateOne({ _id: req.params.orderId }, { $set: { status: "cancelled" } }, options);
+		// Add new balance
+		await User.updateOne({ _id: order?.user }, { $inc: { balance: order?.totalPrice } });
+		// Add a transaction and notification for refund
+		await Transaction.create({ type: "deposit", status: "complete", amount: order?.totalPrice, desc: "Order cancellation", user: req.session.user._id });
+		await Notification.create({ link: `/account/orders/${order?._id}`, desc: "Your order has been refunded", user: req.session.user._id });
+		await session.commitTransaction();
+		session.endSession();
+		res.status(200).json({ success: true });
+	} catch {
+		await session.abortTransaction();
+		session.endSession();
+		res.status(400);
+		throw new Error("An error occurred while cancelling order");
+	}
 });
 ordersRouter.get("/", user, getOrders);
 ordersRouter.get("/:orderId", user, getAnOrder);

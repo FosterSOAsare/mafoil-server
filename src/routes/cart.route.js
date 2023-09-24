@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const asyncHandler = require("express-async-handler");
 
 const user = require("../middlewares/user.middleware");
@@ -6,6 +7,8 @@ const Cart = require("../schemas/Cart.schema");
 const Product = require("../schemas/Products.schema");
 const Order = require("../schemas/Order.schema");
 const User = require("../schemas/User.schema");
+const Transaction = require("../schemas/Transaction.schema");
+const Notification = require("../schemas/Notification.schema");
 const cartRouter = express.Router();
 
 const getPopulatedCart = asyncHandler(async (userId) => {
@@ -83,8 +86,6 @@ const checkoutCart = asyncHandler(async (req, res) => {
 	const totalProfit = cartData.reduce((total, item) => total + item.totalItemsProfit, 0);
 	let avgProfitPercent = (totalProfit / totalPrice) * 100;
 
-	console.log(user.balance);
-
 	if (user.balance < totalPrice) {
 		res.status(400);
 		throw new Error("Balance is insufficient to complete purchase");
@@ -92,13 +93,32 @@ const checkoutCart = asyncHandler(async (req, res) => {
 
 	let response = { cart: cartData, endDate, totalPrice, totalProfit, avgProfitPercent: Math.round((avgProfitPercent + Number.EPSILON) * 100) / 100, status: "pending", user: req.session.user._id };
 
-	await User.updateOne({ _id: req.session.user._id }, { $inc: { balance: -totalPrice } });
-	await Order.create(response);
+	let order = await Order.create({ ...response });
+	if (!order) {
+		res.status(400);
+		throw new Error("An error occurred while creating order");
+	}
+	const session = await mongoose.startSession();
+	try {
+		session.startTransaction();
+		const options = { session };
+		// Update balance
+		await Transaction.create({ type: "withdraw", amount: totalPrice, status: "complete", desc: "Cart checkout payment", user: req.session.user._id });
+		await Notification.create({ link: `/account/orders/${order._id}`, user: req.session.user._id, desc: "Your cart has been successfully checked out." });
 
-	// TODO : Insert transaction
-	await Cart.deleteOne({ user: req.session.user._id });
+		await User.updateOne({ _id: req.session.user._id }, { $inc: { balance: -totalPrice } }, options);
 
-	res.status(200).json({ total: totalPrice, success: true });
+		// TODO : Insert transaction
+		await Cart.deleteOne({ user: req.session.user._id });
+		await session.commitTransaction();
+		session.endSession();
+		res.status(200).json({ total: totalPrice, success: true });
+	} catch (e) {
+		await session.commitTransaction();
+		session.endSession();
+		res.status(400);
+		throw new Error("An error occurred while checking out cart");
+	}
 });
 cartRouter.get("/", user, getUserCart);
 cartRouter.get("/checkout", user, checkoutCart);
