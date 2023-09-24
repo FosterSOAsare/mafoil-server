@@ -23,6 +23,26 @@ const fetchRecommendations = asyncHandler(async (category, slugname) => {
 	recommendations = recommendations.map((re) => ({ ...re?._doc, rating: 0, totalRatings: 0 }));
 	return recommendations;
 });
+
+const getProductRecommendations = asyncHandler(async (req, res) => {
+	let product = await Products.findOne({ slugname: req.params?.slugname }, { __v: 0 });
+	if (!product) {
+		res.status(400);
+		throw new Error("Product does not exist");
+	}
+	let recommendations = await Products.find({ category: product?.category, slugname: { $not: { $eq: product?.slugname } } }).limit(4);
+	recommendations = recommendations.map((re) => ({ ...re?._doc, rating: 0, totalRatings: 0 }));
+	res.status(200).json(recommendations);
+});
+
+const getRecentProducts = asyncHandler(async (req, res) => {
+	let { recents } = req.body;
+	recents = await Products.find({ slugname: { $in: recents } });
+
+	recents = recents.map((recent) => ({ ...recent?._doc, rating: 0, totalRatings: 0 }));
+
+	res.status(200).json(recents);
+});
 const getAProduct = asyncHandler(async (req, res) => {
 	const { slugname } = req.params;
 
@@ -34,10 +54,7 @@ const getAProduct = asyncHandler(async (req, res) => {
 	}
 	product = product?._doc;
 
-	// Fetch recommendations
-	const recommendations = await fetchRecommendations(product?.category, product?.slugname);
-
-	res.status(200).json({ product: { ...product, rating: 0, totalRatings: 0 }, recommendations });
+	res.status(200).json({ ...product, rating: 0, totalRatings: 0 });
 });
 const deleteAProduct = asyncHandler(async (req, res) => {
 	let { slugname } = req.query;
@@ -116,4 +133,4 @@ const fetchCategoriesInfo = asyncHandler(async (req, res) => {
 
 	res.status(200).json({ cloth, shoe, bag, accessories, all });
 });
-module.exports = { getProducts, getAProduct, deleteAProduct, updateAProduct, createAProduct, getProductForEdit, fetchCategoriesInfo };
+module.exports = { getProducts, getAProduct, deleteAProduct, updateAProduct, createAProduct, getProductForEdit, fetchCategoriesInfo, getProductRecommendations, getRecentProducts };
