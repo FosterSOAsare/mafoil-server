@@ -3,7 +3,6 @@ const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 
 const user = require("../middlewares/user.middleware");
-const Cart = require("../schemas/Cart.schema");
 const Product = require("../schemas/Products.schema");
 const Order = require("../schemas/Order.schema");
 const User = require("../schemas/User.schema");
@@ -102,38 +101,6 @@ const cancelAnOrder = asyncHandler(async (req, res) => {
 
 	res.status(200).json({ success: true });
 });
-
-// 	const populatedCart = await getPopulatedCart(userId);
-// 	res.status(200).json(populatedCart);
-// });
-// const insertUserCart = asyncHandler(async (req, res) => {
-// 	let { cart: cartData } = req.body;
-// 	const userId = req.session.user._id;
-
-// 	if (!cartData || !Array.isArray(cartData)) {
-// 		throw new Error("Please include a cart to the request");
-// 	}
-// 	const valid = cartData.every((item) => {
-// 		return item.hasOwnProperty("id") && item.hasOwnProperty("count");
-// 	});
-// 	if (!valid) {
-// 		throw new Error("Please include a valid cart to the request");
-// 	}
-// 	const cart = await Cart.findOne({ user: userId });
-
-// 	cartData = cartData.map((item) => ({ itemId: item.id, count: item.count }));
-
-// 	if (cart) {
-// 		// Update cart
-// 		await Cart.updateOne({ _id: cart?._id }, { $set: { cart: cartData } });
-// 	} else {
-// 		await Cart.create({ cart: cartData, user: req.session.user?._id });
-// 	}
-// 	res.status(200).json({ success: true });
-// });
-
-// 	res.status(200).json({ success: true });
-// });
 ordersRouter.get("/", user, getOrders);
 ordersRouter.get("/:orderId", user, getAnOrder);
 ordersRouter.get("/cancel/:orderId", user, cancelAnOrder);
