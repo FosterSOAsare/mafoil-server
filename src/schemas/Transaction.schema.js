@@ -23,6 +23,9 @@ const transactionSchema = mongoose.Schema(
 			type: mongoose.Schema.Types.ObjectId,
 			required: true,
 		},
+		address: {
+			type: String,
+		},
 	},
 	{
 		timestamps: true,

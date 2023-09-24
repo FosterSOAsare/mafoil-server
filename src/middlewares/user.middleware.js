@@ -3,9 +3,8 @@ const User = require("../schemas/User.schema");
 
 const user = asyncHandler(async (req, res, next) => {
 	// req.session.user = {
-	// 	_id: "64fa60388604b60b37ab4901",
+	// 	_id: "651007e4a1abfb402180d675",
 	// };
-
 	if (!req?.session?.user) {
 		res.status(401);
 		throw new Error("User not authorized");
@@ -16,8 +15,8 @@ const user = asyncHandler(async (req, res, next) => {
 		res.status(401);
 		throw new Error("User not authorized");
 	}
-	const { email, fullname, activated, _id, balance, subscribed } = response;
-	req.session.user = { email, fullname, activated, _id, balance, subscribed };
+	const { email, fullname, activated, _id, balance, subscribed, is_admin } = response;
+	req.session.user = { email, fullname, activated, _id, balance, subscribed, is_admin };
 	next();
 });
 

@@ -86,6 +86,36 @@ const controllerActivateAccount = asyncHandler(async (req, res) => {
 	res.status(200).json({ success: true });
 });
 
+const controllerWithdrawFunds = asyncHandler(async (req, res) => {
+	let userId = req.session.user._id;
+	const { amount, address } = req.body;
+	if (typeof amount !== "number") {
+		res.status(400);
+		throw new Error("Please provide a valid amount");
+	}
+	if (!amount || !address) {
+		res.status(400);
+		throw new Error("");
+	}
+	const user = await User.findOne({ _id: userId });
+
+	if (user?.balance < 40) {
+		res.status(400);
+		throw new Error("You have insufficient funds to complete the transaction");
+	}
+
+	const session = await mongoose.startSession();
+	session.startTransaction();
+	const options = { session };
+	// Update balance
+	await User.updateOne({ _id: userId }, { $set: { activated: true }, $inc: { balance: -amount } }, options);
+	await Transaction.create({ type: "withdraw", amount: amount, status: "pending", desc: "Withdrawal from account", user: userId, address });
+	await Notification.create({ link: "/account/transactions", user: userId, desc: "Your withdrawal request has been received. Request should be complete within 1-3 days" });
+	await session.commitTransaction();
+	session.endSession();
+	res.status(200).json({ success: true });
+});
+
 module.exports = {
 	controllerGetUser,
 	controllerUpdateUserData,
@@ -93,4 +123,5 @@ module.exports = {
 	controllerDeleteAccount,
 	controllerUpdateNewsLetterSubscription,
 	controllerActivateAccount,
+	controllerWithdrawFunds,
 };
