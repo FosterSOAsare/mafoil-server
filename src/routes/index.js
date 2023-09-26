@@ -9,6 +9,7 @@ const wishlistRouter = require("./wishlist.route");
 const ordersRouter = require("./orders.route");
 const transactionRouter = require("./transactions.route");
 const notificationRouter = require("./notifications.route");
+const newsletterRouter = require("./newsletter.route");
 
 const appRouter = express.Router();
 
@@ -21,5 +22,6 @@ appRouter.use("/wishlist", wishlistRouter);
 appRouter.use("/orders", ordersRouter);
 appRouter.use("/transactions", transactionRouter);
 appRouter.use("/notifications", notificationRouter);
+appRouter.use("/newsletters", newsletterRouter);
 
 module.exports = appRouter;

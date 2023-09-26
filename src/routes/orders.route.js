@@ -31,14 +31,8 @@ const getOrders = asyncHandler(async (req, res) => {
 
 	let orders = await Order.find(obj).sort({ createdAt: -1 });
 	orders = orders.map((order) => {
-		const { endDate, status, totalProfit, totalPrice, avgProfitPercent, createdAt, _id } = order;
-		let today = new Date().getTime();
-		let createdAtTime = new Date(createdAt).getTime();
-		let endTime = new Date(endDate).getTime();
-		let percent = ((today - createdAtTime) / (endTime - createdAtTime)) * 100;
-		percent = Math.round(percent * 100) / 100;
-
-		return { status, totalPrice, totalProfit, avgProfitPercent, percentComplete: percent, createdAt, _id };
+		const { status, totalProfit, totalPrice, avgProfitPercent, createdAt, _id } = order;
+		return { status, totalPrice, totalProfit, avgProfitPercent, createdAt, _id };
 	});
 	res.status(200).json(orders);
 });
@@ -59,7 +53,7 @@ const getAnOrder = asyncHandler(async (req, res) => {
 			return { count, totalItemsProfit, profitPercent, price, name, image: images[0], _id: itemId };
 		})
 	);
-	let step = percent < 5 ? 1 : percent < 20 ? 2 : percent < 50 ? 3 : percent < 90 ? 4 : 5;
+	let step = percent < 10 ? 1 : percent < 35 ? 2 : percent < 70 ? 3 : percent < 100 ? 4 : 5;
 
 	res.status(200).json({ cart: cartItems, totalPrice, totalProfit, avgProfitPercent, status, step });
 });
@@ -82,7 +76,7 @@ const cancelAnOrder = asyncHandler(async (req, res) => {
 	}
 
 	const percent = createPercentage(order?.createdAt, order?.endDate);
-	if (percent > 5) {
+	if (percent > 10) {
 		res.status(404);
 		throw new Error("Order cannot be cancelled. The specified time for refund has elapsed");
 	}

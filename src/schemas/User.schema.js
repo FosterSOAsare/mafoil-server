@@ -28,10 +28,6 @@ const userSchema = mongoose.Schema(
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
 		},
-		subscribed: {
-			type: Boolean,
-			default: false,
-		},
 		balance: {
 			type: Number,
 			default: 0,
