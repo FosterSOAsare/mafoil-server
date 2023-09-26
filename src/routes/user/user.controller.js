@@ -1,5 +1,8 @@
 const asyncHandler = require("express-async-handler");
+const mongoose = require("mongoose");
 const User = require("../../schemas/User.schema");
+const Transaction = require("../../schemas/Transaction.schema");
+const Notification = require("../../schemas/Notification.schema");
 
 const controllerGetUser = asyncHandler(async (req, res) => {
 	res.status(200).json(req?.session.user);
@@ -7,23 +10,20 @@ const controllerGetUser = asyncHandler(async (req, res) => {
 
 const controllerUpdateUserData = asyncHandler(async (req, res) => {
 	let userId = req.session.user._id;
-	let { firstname, lastname } = req.body;
-	if (!firstname || !lastname) {
+	let { fullname } = req.body;
+	if (!fullname) {
 		res.status(400);
 		throw new Error("Please provide all information");
 	}
 	// Update user
-	await User.updateOne({ _id: userId }, { $set: { firstname, lastname } });
+	await User.updateOne({ _id: userId }, { $set: { fullname } });
 
-	// Update session
-	req.session.user = { ...req.session.user, firstname, lastname };
 	res.status(200).json({ success: true });
 });
 
 const controllerUpdateUserPassword = asyncHandler(async (req, res) => {
-	let userId = req.session.user._id;
-	let { password, newPassword } = req.body;
-	if (!password || !newPassword) {
+	let { oldpassword, newpassword } = req.body;
+	if (!oldpassword || !newpassword) {
 		res.status(400);
 		throw new Error("Please provide all information");
 	}
@@ -31,14 +31,14 @@ const controllerUpdateUserPassword = asyncHandler(async (req, res) => {
 	const user = await User.findOne({ _id: req.session.user._id });
 
 	// Check password
-	let valid = await user.comparePassword(password);
+	let valid = await user.comparePassword(oldpassword);
 	if (!valid) {
 		res.status(400);
 		throw new Error("The provided password is incorrect");
 	}
 
 	// Update user's password
-	await user.updatePassword(newPassword);
+	await user.updatePassword(newpassword);
 	await user.save();
 
 	res.status(200).json({ success: true });
@@ -56,10 +56,69 @@ const controllerDeleteAccount = asyncHandler(async (req, res) => {
 	res.status(200).json({ success: true });
 });
 
+const controllerActivateAccount = asyncHandler(async (req, res) => {
+	let userId = req.session.user._id;
+
+	const user = await User.findOne({ _id: userId });
+	// Check if user has already activated their account
+	if (user.activated) {
+		res.status(400);
+		throw new Error("User has already activated their account");
+	}
+
+	if (user?.balance < 40) {
+		res.status(400);
+		throw new Error("You have insufficient funds to activate your account");
+	}
+
+	const session = await mongoose.startSession();
+	session.startTransaction();
+	const options = { session };
+	// Update balance
+	await User.updateOne({ _id: userId }, { $set: { activated: true }, $inc: { balance: -40 } }, options);
+	await Transaction.create({ type: "withdraw", amount: 40.0, status: "complete", desc: "Account activation fee", user: userId });
+	await Notification.create({ link: "/account", user: userId, desc: "Your account has been activated successfully." });
+	await session.commitTransaction();
+	session.endSession();
+	res.status(200).json({ success: true });
+});
+
+const controllerWithdrawFunds = asyncHandler(async (req, res) => {
+	let userId = req.session.user._id;
+	const { amount, address } = req.body;
+	if (typeof amount !== "number") {
+		res.status(400);
+		throw new Error("Please provide a valid amount");
+	}
+	if (!amount || !address) {
+		res.status(400);
+		throw new Error("");
+	}
+	const user = await User.findOne({ _id: userId });
+
+	if (user?.balance < 40) {
+		res.status(400);
+		throw new Error("You have insufficient funds to complete the transaction");
+	}
+
+	const session = await mongoose.startSession();
+	session.startTransaction();
+	const options = { session };
+	// Update balance
+	await User.updateOne({ _id: userId }, { $set: { activated: true }, $inc: { balance: -amount } }, options);
+	await Transaction.create({ type: "withdraw", amount: amount, status: "pending", desc: "Withdrawal from account", user: userId, address });
+	await Notification.create({ link: "/account/transactions", user: userId, desc: "Your withdrawal request has been received. Request should be complete within 1-3 days" });
+	await session.commitTransaction();
+	session.endSession();
+	res.status(200).json({ success: true });
+});
+
 module.exports = {
 	controllerGetUser,
 	controllerUpdateUserData,
 	controllerUpdateUserPassword,
 	controllerDeleteAccount,
 	controllerUpdateNewsLetterSubscription,
+	controllerActivateAccount,
+	controllerWithdrawFunds,
 };

@@ -1,5 +1,13 @@
 const express = require("express");
-const { controllerGetUser, controllerUpdateUserData, controllerUpdateUserPassword, controllerUpdateNewsLetterSubscription, controllerDeleteAccount } = require("./user.controller");
+const {
+	controllerGetUser,
+	controllerUpdateUserData,
+	controllerUpdateUserPassword,
+	controllerUpdateNewsLetterSubscription,
+	controllerDeleteAccount,
+	controllerActivateAccount,
+	controllerWithdrawFunds,
+} = require("./user.controller");
 const user = require("../../middlewares/user.middleware");
 
 const userRouter = express.Router();
@@ -11,4 +19,7 @@ userRouter.put("/password", user, controllerUpdateUserPassword);
 
 userRouter.delete("", user, controllerDeleteAccount);
 userRouter.put("/newsletter", user, controllerUpdateNewsLetterSubscription);
+userRouter.get("/activate", user, controllerActivateAccount);
+userRouter.post("/withdraw", user, controllerWithdrawFunds);
+
 module.exports = userRouter;

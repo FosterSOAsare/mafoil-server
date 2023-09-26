@@ -34,10 +34,10 @@ const controllerAuthLocalLogin = asyncHandler(async (req, res) => {
 		throw new Error("Email is not verified , redirecting you to verify your email address");
 	}
 
-	const { fullname, activated, _id, balance, subscribed } = user;
-	req.session.user = { email, fullname, activated, _id, balance, subscribed };
+	const { fullname, activated, _id, balance, subscribed, is_admin } = user;
+	req.session.user = { _id };
 	req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
-	res.status(200).json(req.session.user);
+	res.status(200).json({ email, fullname, activated, _id, balance, is_admin, subscribed });
 });
 const controllerAuthLocalRegister = asyncHandler(async (req, res) => {
 	let { email, password, fullname, referrer } = req.body;
@@ -55,12 +55,10 @@ const controllerAuthLocalRegister = asyncHandler(async (req, res) => {
 	// Create new user based on referrer
 	try {
 		await User.findOne({ _id: referrer });
-		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: false, referrer });
+		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: false, referrer, is_admin: false });
 	} catch (e) {
-		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: false, referrer });
+		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: false, is_admin: false });
 	}
-
-	console.log(user);
 
 	// Send email for verification , set code and save user
 	user = await controllerVerificationEmail(user, sendEmailVerificationEmail);

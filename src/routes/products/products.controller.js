@@ -23,6 +23,26 @@ const fetchRecommendations = asyncHandler(async (category, slugname) => {
 	recommendations = recommendations.map((re) => ({ ...re?._doc, rating: 0, totalRatings: 0 }));
 	return recommendations;
 });
+
+const getProductRecommendations = asyncHandler(async (req, res) => {
+	let product = await Products.findOne({ slugname: req.params?.slugname }, { __v: 0 });
+	if (!product) {
+		res.status(400);
+		throw new Error("Product does not exist");
+	}
+	let recommendations = await Products.find({ category: product?.category, slugname: { $not: { $eq: product?.slugname } } }).limit(4);
+	recommendations = recommendations.map((re) => ({ ...re?._doc, rating: 0, totalRatings: 0 }));
+	res.status(200).json(recommendations);
+});
+
+const getRecentProducts = asyncHandler(async (req, res) => {
+	let { recents } = req.body;
+	recents = await Products.find({ slugname: { $in: recents } });
+
+	recents = recents.map((recent) => ({ ...recent?._doc, rating: 0, totalRatings: 0 }));
+
+	res.status(200).json(recents);
+});
 const getAProduct = asyncHandler(async (req, res) => {
 	const { slugname } = req.params;
 
@@ -34,18 +54,54 @@ const getAProduct = asyncHandler(async (req, res) => {
 	}
 	product = product?._doc;
 
-	// Fetch recommendations
-	const recommendations = await fetchRecommendations(product?.category, product?.slugname);
-
-	res.status(200).json({ product: { ...product, rating: 0, totalRatings: 0 }, recommendations });
+	res.status(200).json({ ...product, rating: 0, totalRatings: 0 });
 });
 const deleteAProduct = asyncHandler(async (req, res) => {
 	let { slugname } = req.query;
 	res.json({ data: "okay" });
 });
 
+const getProductForEdit = asyncHandler(async (req, res) => {
+	const { slugname } = req.params;
+
+	let product = await Products.findOne({ slugname }, { __v: 0, createdAt: 0, updatedAt: 0 });
+
+	if (!product) {
+		res.status(404);
+		throw new Error("Product was not found");
+	}
+	product = { ...product?._doc, rating: 0, totalRatings: 0, price: "" + product?._doc?.price };
+	res.status(200).json(product);
+});
+
 const updateAProduct = asyncHandler(async (req, res) => {
-	res.json({ data: "okay" });
+	const { name, price, category, store, long_desc, short_desc, images } = req.body;
+	let { slugname } = req.params;
+	if (!name || !price || !category || !store || !short_desc || images?.length === 0 || !slugname) {
+		res.status(400);
+		throw new Error("Please provide all necessary information");
+	}
+
+	const product = await Products.findOne({ slugname });
+	if (!product) {
+		res.status(404);
+		throw new Error("The requested product does not exist");
+	}
+	let newSlugname = slugname;
+
+	if (name.toLowerCase() !== product?.name?.toLowerCase()) {
+		// Check slugname
+		newSlugname = createSlugName(name);
+		const product = await Products.findOne({ slugname: newSlugname });
+		console.log(product);
+		if (product) {
+			res.status(400);
+			throw new Error("A product with this particular name exists. Please change the name");
+		}
+	}
+
+	await Products.updateOne({ _id: product?._id }, { $set: { name, price, category, store, long_desc, short_desc, slugname: newSlugname, images } });
+	res.status(200).json({ slugname: newSlugname });
 });
 
 const createAProduct = asyncHandler(async (req, res) => {
@@ -67,4 +123,14 @@ const createAProduct = asyncHandler(async (req, res) => {
 	const response = await Products.create({ name, price, category, store, long_desc, short_desc, slugname, images });
 	res.status(200).json({ slugname: response?.slugname });
 });
-module.exports = { getProducts, getAProduct, deleteAProduct, updateAProduct, createAProduct };
+
+const fetchCategoriesInfo = asyncHandler(async (req, res) => {
+	let all = await Products.countDocuments();
+	let cloth = await Products.countDocuments({ category: "cloth" });
+	let shoe = await Products.countDocuments({ category: "shoe" });
+	let bag = await Products.countDocuments({ category: "bag" });
+	let accessories = await Products.countDocuments({ category: "accessories" });
+
+	res.status(200).json({ cloth, shoe, bag, accessories, all });
+});
+module.exports = { getProducts, getAProduct, deleteAProduct, updateAProduct, createAProduct, getProductForEdit, fetchCategoriesInfo, getProductRecommendations, getRecentProducts };

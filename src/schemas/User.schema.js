@@ -28,10 +28,6 @@ const userSchema = mongoose.Schema(
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
 		},
-		subscribed: {
-			type: Boolean,
-			default: false,
-		},
 		balance: {
 			type: Number,
 			default: 0,
@@ -39,6 +35,11 @@ const userSchema = mongoose.Schema(
 		activated: {
 			type: Boolean,
 			default: false,
+		},
+		is_admin: {
+			type: Boolean,
+			default: false,
+			immutable: true,
 		},
 	},
 	{
