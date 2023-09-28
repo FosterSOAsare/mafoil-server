@@ -97,7 +97,7 @@ const cancelAnOrder = asyncHandler(async (req, res) => {
 		await session.commitTransaction();
 		session.endSession();
 		res.status(200).json({ success: true });
-	} catch {
+	} catch (e) {
 		await session.abortTransaction();
 		session.endSession();
 		res.status(400);

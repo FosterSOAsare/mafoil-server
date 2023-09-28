@@ -72,14 +72,21 @@ const controllerActivateAccount = asyncHandler(async (req, res) => {
 	}
 
 	const session = await mongoose.startSession();
-	session.startTransaction();
-	const options = { session };
-	// Update balance
-	await User.updateOne({ _id: userId }, { $set: { activated: true }, $inc: { balance: -40 } }, options);
-	await Transaction.create({ type: "withdraw", amount: 40.0, status: "complete", desc: "Account activation fee", user: userId });
-	await Notification.create({ link: "/account", user: userId, desc: "Your account has been activated successfully." });
-	await session.commitTransaction();
-	session.endSession();
+	try {
+		session.startTransaction();
+		const options = { session };
+		// Update balance
+		await User.updateOne({ _id: userId }, { $set: { activated: true }, $inc: { balance: -40 } }, options);
+		await Transaction.create({ type: "withdraw", amount: 40.0, status: "complete", desc: "Account activation fee", user: userId });
+		await Notification.create({ link: "/account", user: userId, desc: "Your account has been activated successfully." });
+		await session.commitTransaction();
+		session.endSession();
+	} catch (e) {
+		await session.abortTransaction();
+		session.endSession();
+		res.status(400);
+		throw new Error("An error occurred while activating account");
+	}
 	res.status(200).json({ success: true });
 });
 
