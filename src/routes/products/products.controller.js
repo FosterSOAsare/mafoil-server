@@ -2,7 +2,6 @@ const asyncHandler = require("express-async-handler");
 const Products = require("../../schemas/Products.schema");
 const createSlugName = require("../../utils/createSlugName");
 const Reviews = require("../../schemas/Reviews.schema");
-const Reviews = require("../../schemas/Reviews.schema");
 
 const getProducts = asyncHandler(async (req, res) => {
 	let { category, page } = req.query;
@@ -18,12 +17,6 @@ const getProducts = asyncHandler(async (req, res) => {
 	});
 
 	res.status(200).json({ data: response, nextPage: totalCount > response.length + (page - 1) * 12 });
-});
-
-const fetchRecommendations = asyncHandler(async (category, slugname) => {
-	let recommendations = await Products.find({ category: category, slugname: { $not: { $eq: slugname } } }).limit(4);
-	recommendations = recommendations.map((re) => ({ ...re?._doc, rating: 0, totalRatings: 0 }));
-	return recommendations;
 });
 
 const getProductRecommendations = asyncHandler(async (req, res) => {
