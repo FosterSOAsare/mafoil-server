@@ -13,7 +13,7 @@ const deleteUnverifiedUser = asyncHandler(async () => {
 		})
 		.map((user) => user._id);
 	await User.deleteMany({ _id: { $in: filtered } });
-	console.log("All unverified email deleted completely...");
+	// console.log("All unverified email deleted completely...");
 });
 
 module.exports = deleteUnverifiedUser;
