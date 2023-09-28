@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Products = require("../../schemas/Products.schema");
 const createSlugName = require("../../utils/createSlugName");
 const Reviews = require("../../schemas/Reviews.schema");
+const Reviews = require("../../schemas/Reviews.schema");
 
 const getProducts = asyncHandler(async (req, res) => {
 	let { category, page } = req.query;
@@ -167,6 +168,19 @@ const fetchCategoriesInfo = asyncHandler(async (req, res) => {
 
 	res.status(200).json({ cloth, shoe, bag, accessories, all });
 });
+module.exports = {
+	getProducts,
+	getAProduct,
+	deleteAProduct,
+	updateAProduct,
+	createAProduct,
+	getProductForEdit,
+	fetchCategoriesInfo,
+	getProductRecommendations,
+	getRecentProducts,
+	getProductReviews,
+	postAProductReview,
+};
 module.exports = {
 	getProducts,
 	getAProduct,
