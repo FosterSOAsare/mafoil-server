@@ -1,6 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const Products = require("../../schemas/Products.schema");
 const createSlugName = require("../../utils/createSlugName");
+const Reviews = require("../../schemas/Reviews.schema");
 
 const getProducts = asyncHandler(async (req, res) => {
 	let { category, page } = req.query;
@@ -33,6 +34,39 @@ const getProductRecommendations = asyncHandler(async (req, res) => {
 	let recommendations = await Products.find({ category: product?.category, slugname: { $not: { $eq: product?.slugname } } }).limit(4);
 	recommendations = recommendations.map((re) => ({ ...re?._doc, rating: 0, totalRatings: 0 }));
 	res.status(200).json(recommendations);
+});
+
+const getProductReviews = asyncHandler(async (req, res) => {
+	let product = await Products.findOne({ slugname: req.params?.slugname }, { __v: 0 });
+	if (!product) {
+		res.status(404);
+		throw new Error("Product does not exist");
+	}
+	let reviews = await Reviews.find({ product: product?._id });
+	res.status(200).json(reviews);
+});
+
+const postAProductReview = asyncHandler(async (req, res) => {
+	const { fullname, email, _id } = req.session.user;
+	let { title, rating, comment } = req.body;
+	if (!title || typeof rating !== "number" || !comment) {
+		res.status(400);
+		throw new Error("Provide all necessary parameters");
+	}
+	if (rating > 5) {
+		res.status(400);
+		throw new Error("The provided rating value in invalid, must be less than or equal to 5");
+	}
+	let product = await Products.findOne({ slugname: req.params?.slugname }, { __v: 0 });
+	if (!product) {
+		res.status(404);
+		throw new Error("Product does not exist");
+	}
+
+	console.log({ title, rating, user: _id, email, comment, name: fullname, product: product?._id, email });
+	await Reviews.create({ title, rating, user: _id, email, comment, name: fullname, product: product?._id, email, status: "pending" });
+
+	res.status(200).json({ success: true });
 });
 
 const getRecentProducts = asyncHandler(async (req, res) => {
@@ -133,4 +167,16 @@ const fetchCategoriesInfo = asyncHandler(async (req, res) => {
 
 	res.status(200).json({ cloth, shoe, bag, accessories, all });
 });
-module.exports = { getProducts, getAProduct, deleteAProduct, updateAProduct, createAProduct, getProductForEdit, fetchCategoriesInfo, getProductRecommendations, getRecentProducts };
+module.exports = {
+	getProducts,
+	getAProduct,
+	deleteAProduct,
+	updateAProduct,
+	createAProduct,
+	getProductForEdit,
+	fetchCategoriesInfo,
+	getProductRecommendations,
+	getRecentProducts,
+	getProductReviews,
+	postAProductReview,
+};
