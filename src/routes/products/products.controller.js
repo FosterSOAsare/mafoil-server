@@ -174,16 +174,3 @@ module.exports = {
 	getProductReviews,
 	postAProductReview,
 };
-module.exports = {
-	getProducts,
-	getAProduct,
-	deleteAProduct,
-	updateAProduct,
-	createAProduct,
-	getProductForEdit,
-	fetchCategoriesInfo,
-	getProductRecommendations,
-	getRecentProducts,
-	getProductReviews,
-	postAProductReview,
-};
