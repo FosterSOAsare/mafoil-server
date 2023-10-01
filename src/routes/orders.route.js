@@ -3,6 +3,8 @@ const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 
 const user = require("../middlewares/user.middleware");
+const admin = require("../middlewares/admin.middleware");
+
 const Product = require("../schemas/Products.schema");
 const Order = require("../schemas/Order.schema");
 const User = require("../schemas/User.schema");
@@ -21,10 +23,26 @@ function createPercentage(createdAt, endDate) {
 }
 const getOrders = asyncHandler(async (req, res) => {
 	let { filter } = req.query;
-	console.log(filter);
 	filter = filter ? filter : "all";
 
 	let obj = { user: req.session.user._id };
+	if (filter !== "all") {
+		obj = { ...obj, status: filter };
+	}
+
+	let orders = await Order.find(obj).sort({ createdAt: -1 });
+	orders = orders.map((order) => {
+		const { status, totalProfit, totalPrice, avgProfitPercent, createdAt, _id } = order;
+		return { status, totalPrice, totalProfit, avgProfitPercent, createdAt, _id };
+	});
+	res.status(200).json(orders);
+});
+
+const getAllOrders = asyncHandler(async (req, res) => {
+	let { filter } = req.query;
+	filter = filter ? filter : "all";
+
+	let obj = {};
 	if (filter !== "all") {
 		obj = { ...obj, status: filter };
 	}
@@ -105,6 +123,7 @@ const cancelAnOrder = asyncHandler(async (req, res) => {
 	}
 });
 ordersRouter.get("/", user, getOrders);
+ordersRouter.get("/admin", user, admin, getAllOrders);
 ordersRouter.get("/:orderId", user, getAnOrder);
 ordersRouter.get("/cancel/:orderId", user, cancelAnOrder);
 // ordersRouter.post("/", user, insertUserCart);
