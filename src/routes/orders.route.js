@@ -3,6 +3,8 @@ const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 
 const user = require("../middlewares/user.middleware");
+const admin = require("../middlewares/admin.middleware");
+
 const Product = require("../schemas/Products.schema");
 const Order = require("../schemas/Order.schema");
 const User = require("../schemas/User.schema");
@@ -21,10 +23,26 @@ function createPercentage(createdAt, endDate) {
 }
 const getOrders = asyncHandler(async (req, res) => {
 	let { filter } = req.query;
-	console.log(filter);
 	filter = filter ? filter : "all";
 
 	let obj = { user: req.session.user._id };
+	if (filter !== "all") {
+		obj = { ...obj, status: filter };
+	}
+
+	let orders = await Order.find(obj).sort({ createdAt: -1 });
+	orders = orders.map((order) => {
+		const { status, totalProfit, totalPrice, avgProfitPercent, createdAt, _id } = order;
+		return { status, totalPrice, totalProfit, avgProfitPercent, createdAt, _id };
+	});
+	res.status(200).json(orders);
+});
+
+const getAllOrders = asyncHandler(async (req, res) => {
+	let { filter } = req.query;
+	filter = filter ? filter : "all";
+
+	let obj = {};
 	if (filter !== "all") {
 		obj = { ...obj, status: filter };
 	}
@@ -90,14 +108,14 @@ const cancelAnOrder = asyncHandler(async (req, res) => {
 		// Update balance
 		await Order.updateOne({ _id: req.params.orderId }, { $set: { status: "cancelled" } }, options);
 		// Add new balance
-		await User.updateOne({ _id: order?.user }, { $inc: { balance: order?.totalPrice } });
+		await User.updateOne({ _id: order?.user }, { $inc: { balance: order?.totalPrice } }, options);
 		// Add a transaction and notification for refund
-		await Transaction.create({ type: "deposit", status: "complete", amount: order?.totalPrice, desc: "Order cancellation", user: req.session.user._id });
-		await Notification.create({ link: `/account/orders/${order?._id}`, desc: "Your order has been refunded", user: req.session.user._id });
+		await Transaction.create([{ type: "deposit", status: "completed", amount: order?.totalPrice, desc: "Order cancellation", user: req.session.user._id }], options);
+		await Notification.create([{ link: `/orders/${order?._id}`, desc: "Your order has been refunded", user: req.session.user._id }], options);
 		await session.commitTransaction();
 		session.endSession();
 		res.status(200).json({ success: true });
-	} catch {
+	} catch (e) {
 		await session.abortTransaction();
 		session.endSession();
 		res.status(400);
@@ -105,6 +123,7 @@ const cancelAnOrder = asyncHandler(async (req, res) => {
 	}
 });
 ordersRouter.get("/", user, getOrders);
+ordersRouter.get("/admin", user, admin, getAllOrders);
 ordersRouter.get("/:orderId", user, getAnOrder);
 ordersRouter.get("/cancel/:orderId", user, cancelAnOrder);
 // ordersRouter.post("/", user, insertUserCart);
