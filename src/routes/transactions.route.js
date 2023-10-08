@@ -16,12 +16,19 @@ const getTxns = asyncHandler(async (req, res) => {
 		obj = { ...obj, status: filter };
 	}
 
-	await Transaction.updateMany({ status: "complete" }, { $set: { status: "completed" } });
-
 	let txns = await Transaction.find(obj, { __v: 0, user: 0, updatedAt: 0 }).sort({ createdAt: -1 });
 	res.status(200).json(txns);
 });
+const getATxn = asyncHandler(async (req, res) => {
+	let obj = { user: req.session.user._id, _id: req.param.id };
 
+	let txn = await Transaction.find(obj, { __v: 0, user: 0, updatedAt: 0 }).sort({ createdAt: -1 });
+	if (!txn) {
+		res.status(404);
+		throw new Error("The transaction does not exist");
+	}
+	res.status(200).json(txn);
+});
 const getAllTxns = asyncHandler(async (req, res) => {
 	let { filter } = req.query;
 
@@ -40,5 +47,6 @@ const getAllTxns = asyncHandler(async (req, res) => {
 
 transactionsRouter.get("/", user, getTxns);
 transactionsRouter.get("/admin", user, admin, getAllTxns);
+transactionsRouter.get("/:id", user, admin, getATxn);
 
 module.exports = transactionsRouter;

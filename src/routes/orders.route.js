@@ -111,7 +111,7 @@ const cancelAnOrder = asyncHandler(async (req, res) => {
 		await User.updateOne({ _id: order?.user }, { $inc: { balance: order?.totalPrice } });
 		// Add a transaction and notification for refund
 		await Transaction.create({ type: "deposit", status: "complete", amount: order?.totalPrice, desc: "Order cancellation", user: req.session.user._id });
-		await Notification.create({ link: `/account/orders/${order?._id}`, desc: "Your order has been refunded", user: req.session.user._id });
+		await Notification.create({ link: `/orders/${order?._id}`, desc: "Your order has been refunded", user: req.session.user._id });
 		await session.commitTransaction();
 		session.endSession();
 		res.status(200).json({ success: true });

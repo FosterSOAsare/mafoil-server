@@ -104,7 +104,7 @@ const checkoutCart = asyncHandler(async (req, res) => {
 		const options = { session };
 		// Update balance
 		await Transaction.create({ type: "withdraw", amount: totalPrice, status: "complete", desc: "Cart checkout payment", user: req.session.user._id });
-		await Notification.create({ link: `/account/orders/${order._id}`, user: req.session.user._id, desc: "Your cart has been successfully checked out." });
+		await Notification.create({ link: `/orders/${order._id}`, user: req.session.user._id, desc: "Your cart has been successfully checked out." });
 
 		await User.updateOne({ _id: req.session.user._id }, { $inc: { balance: -totalPrice } }, options);
 
