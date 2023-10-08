@@ -16,11 +16,15 @@ const uploadFile = asyncHandler(async (req, res) => {
 
 const controllerDeleteFile = asyncHandler(async (req, res) => {
 	const { public_id } = req.query;
+	if (!public_id) {
+		res.status(400);
+		throw new Error("Please enter a public_id of the file you want to delete");
+	}
 	await deleteFile(public_id);
 	res.status(200).json({ success: true });
 });
 
 filesRouter.post("/", upload.single("file"), uploadFile);
-filesRouter.delete("/:public_id", user, controllerDeleteFile);
+filesRouter.delete("/", user, controllerDeleteFile);
 
 module.exports = filesRouter;
