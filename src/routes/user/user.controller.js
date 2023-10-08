@@ -77,8 +77,16 @@ const controllerActivateAccount = asyncHandler(async (req, res) => {
 		const options = { session };
 		// Update balance
 		await User.updateOne({ _id: userId }, { $set: { activated: true }, $inc: { balance: -40 } }, options);
-		await Transaction.create({ type: "withdraw", amount: 40.0, status: "complete", desc: "Account activation fee", user: userId });
-		await Notification.create({ link: "/account", user: userId, desc: "Your account has been activated successfully." });
+		await Transaction.create([{ type: "withdraw", amount: 40.0, status: "completed", desc: "Account activation fee", user: userId }], options);
+		await Notification.create([{ link: "/account", user: userId, desc: "Your account has been activated successfully." }], options);
+		if (user?.referrer) {
+			// Update referrer's balance
+			// Insert notification to tell referrer that they received money
+			// Insert a transactions
+			await User.updateOne({ _id: user?.referrer._id }, { $inc: { balance: 3 } }, options);
+			await Transaction.create({ type: "withdraw", amount: 3.0, status: "completed", desc: "Referral's account activated", user: user?.referrer._id });
+			await Notification.create({ link: "/account", user: user?.referrer._id, desc: "You received $3 from your referral's account activation" });
+		}
 		await session.commitTransaction();
 		session.endSession();
 	} catch (e) {

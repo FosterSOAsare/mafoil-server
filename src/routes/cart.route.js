@@ -104,13 +104,13 @@ const checkoutCart = asyncHandler(async (req, res) => {
 		session.startTransaction();
 		const options = { session };
 		// Update balance
-		await Transaction.create({ type: "withdraw", amount: totalPrice, status: "completed", desc: "Cart checkout payment", user: req.session.user._id });
-		await Notification.create({ link: `/orders/${order._id}`, user: req.session.user._id, desc: "Your cart has been successfully checked out." });
+		await Transaction.create([{ type: "withdraw", amount: totalPrice, status: "completed", desc: "Cart checkout payment", user: req.session.user._id }], options);
+		await Notification.create([{ link: `/orders/${order._id}`, user: req.session.user._id, desc: "Your cart has been successfully checked out." }], options);
 
 		await User.updateOne({ _id: req.session.user._id }, { $inc: { balance: -totalPrice } }, options);
 
 		// TODO : Insert transaction
-		await Cart.deleteOne({ user: req.session.user._id });
+		await Cart.deleteOne({ user: req.session.user._id }, options);
 		await session.commitTransaction();
 		session.endSession();
 		res.status(200).json({ total: totalPrice, success: true });
