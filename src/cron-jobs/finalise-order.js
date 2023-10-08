@@ -13,7 +13,6 @@ const finalizeOrder = asyncHandler(async () => {
 	let filtered = orders.filter((order) => {
 		let today = new Date().getTime();
 		let endDate = new Date(order?.endDate).getTime();
-		console.log(today, endDate);
 		return endDate < today;
 	});
 
@@ -24,7 +23,6 @@ const finalizeOrder = asyncHandler(async () => {
 	const total = Math.round((totalPrice + totalProfit) * 100) / 100;
 
 	const session = await mongoose.startSession();
-	console.log(order);
 	try {
 		session.startTransaction();
 		const options = { session };
@@ -35,14 +33,14 @@ const finalizeOrder = asyncHandler(async () => {
 		// Insert notification to notify of the completion
 		await Notification.create(
 			[
-				{ link: `/account/orders/${order._id}`, user, desc: "Your order has been completed." },
+				{ link: `/orders/${order._id}`, user, desc: "Your order has been completed." },
 				{ link: `/account/transactions`, user, desc: `You received a profit of ${totalProfit} from your order` },
 			],
 			options
 		);
 
 		// Insert a transaction
-		await Transaction.create([{ type: "deposit", amount: total, status: "complete", desc: "Order finalization", user }], options);
+		await Transaction.create([{ type: "deposit", amount: total, status: "completed", desc: "Order finalization", user }], options);
 
 		// Update user's balance
 		await User.updateOne({ _id: user }, { $inc: { balance: total } }, options);

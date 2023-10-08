@@ -82,8 +82,9 @@ const checkoutCart = asyncHandler(async (req, res) => {
 
 		return { itemId: _id, totalItemsProfit, profitPercent, count, price };
 	});
-	const totalPrice = cartData.reduce((total, item) => total + item.price * item.count, 0);
-	const totalProfit = cartData.reduce((total, item) => total + item.totalItemsProfit, 0);
+	const totalPrice = Math.round(cartData.reduce((total, item) => total + item.price * item.count, 0) * 100) / 100;
+	const totalProfit = Math.round(cartData.reduce((total, item) => total + item.totalItemsProfit, 0) * 100) / 100;
+
 	let avgProfitPercent = (totalProfit / totalPrice) * 100;
 
 	if (user.balance < totalPrice) {
@@ -103,7 +104,7 @@ const checkoutCart = asyncHandler(async (req, res) => {
 		session.startTransaction();
 		const options = { session };
 		// Update balance
-		await Transaction.create({ type: "withdraw", amount: totalPrice, status: "complete", desc: "Cart checkout payment", user: req.session.user._id });
+		await Transaction.create({ type: "withdraw", amount: totalPrice, status: "completed", desc: "Cart checkout payment", user: req.session.user._id });
 		await Notification.create({ link: `/orders/${order._id}`, user: req.session.user._id, desc: "Your cart has been successfully checked out." });
 
 		await User.updateOne({ _id: req.session.user._id }, { $inc: { balance: -totalPrice } }, options);
