@@ -1,7 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const Products = require("../../schemas/Products.schema");
 const createSlugName = require("../../utils/createSlugName");
-const Reviews = require("../../schemas/Reviews.schema");
+s;
 
 const getProducts = asyncHandler(async (req, res) => {
 	let { category, page } = req.query;
