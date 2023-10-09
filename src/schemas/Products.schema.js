@@ -1,6 +1,11 @@
 const mongoose = require("mongoose");
 
 const imagesSchema = mongoose.Schema({ public_id: String, url: String }, { _id: false });
+const ratingSchema = {
+	totalRatings: { type: Number, default: 0 },
+	avgRating: { type: Number, default: 0 },
+	accumulatedRating: { type: Number, default: 0 },
+};
 const productsSchema = mongoose.Schema(
 	{
 		name: {
@@ -35,14 +40,7 @@ const productsSchema = mongoose.Schema(
 		images: {
 			type: [imagesSchema],
 		},
-		rating: {
-			type: Number,
-			default: 0,
-		},
-		totalRatings: {
-			type: Number,
-			default: 0,
-		},
+		rating: ratingSchema,
 	},
 	{
 		timestamps: true,

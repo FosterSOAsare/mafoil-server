@@ -11,10 +11,12 @@ const getProductReviews = asyncHandler(async (req, res) => {
 		res.status(404);
 		throw new Error("Product does not exist");
 	}
+
 	let reviews = await Reviews.find({ product: product?._id, status: "accepted" });
 	res.status(200).json(reviews);
 });
 const getPendingProductReviews = asyncHandler(async (req, res) => {
+	// await Reviews.updateMany({}, { $set: { status: "pending" } });
 	let reviews = await Reviews.find({ status: "pending" });
 	res.status(200).json(reviews);
 });
@@ -45,13 +47,28 @@ const moderateProductReview = asyncHandler(async (req, res) => {
 		await Notifications.create(
 			[
 				{
-					link: `/products/${product?._id}#reviews`,
+					link: `/products/${product?.slugname}`,
 					user: review.user,
-					desc: `Yourreview on ${product?.name} has been ${status}. ${status === "rejected" ? `if you need an explanation, open a complaint with ${product?._id} as a ticket id` : ""}`,
+					desc: `Your review on ${product?.name} has been ${status}. ${status === "rejected" ? `if you need an explanation, open a complaint with ${product?._id} as a ticket id` : ""}`,
 				},
 			],
 			options
 		);
+
+		// if accepted , update the totalReviews , avgReview and  count , accumulatedRating
+		if (status === "accepted") {
+			let rating = product.rating;
+			console.log(rating);
+			let accumulatedRating = rating.accumulatedRating + review.rating,
+				totalRatings = rating.totalRatings + 1,
+				avgRating = Math.round(accumulatedRating / totalRatings);
+			rating = {
+				accumulatedRating,
+				avgRating,
+				totalRatings,
+			};
+			await Products.updateOne({ _id: product?._id }, { $set: { rating } }, options);
+		}
 
 		await session.commitTransaction();
 		session.endSession();
@@ -89,22 +106,21 @@ const postAProductReview = asyncHandler(async (req, res) => {
 		await Reviews.create([{ title, rating, user: _id, email, comment, name: fullname, product: product?._id, email, status: "pending" }], options);
 
 		// Insert notification to tell user that their review has been received
-		await Notifications.create(
-			[{ link: `/products/${product?._id}#reviews`, user: req.session.user?._id, desc: `Your review on ${product?.name} has been received and is waiting for moderation.` }],
+		let notif = await Notifications.create(
+			[{ link: `/products/${product?.slugname}`, user: req.session.user?._id, desc: `Your review on ${product?.name} has been received and is waiting for moderation.` }],
 			options
 		);
 
 		await session.commitTransaction();
 		session.endSession();
+		// Add notification that review has been received
+		res.status(200).json({ success: true, notif });
 	} catch (e) {
 		await session.abortTransaction();
 		session.endSession();
 		res.status(400);
 		throw new Error("An error occurred while moderating review");
 	}
-
-	// Add notification that review has been received
-	res.status(200).json({ success: true });
 });
 
 module.exports = {
