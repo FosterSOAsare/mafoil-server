@@ -35,6 +35,14 @@ const productsSchema = mongoose.Schema(
 		images: {
 			type: [imagesSchema],
 		},
+		rating: {
+			type: Number,
+			default: 0,
+		},
+		totalRatings: {
+			type: Number,
+			default: 0,
+		},
 	},
 	{
 		timestamps: true,

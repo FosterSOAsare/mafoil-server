@@ -50,7 +50,6 @@ const finalizeOrder = asyncHandler(async () => {
 
 		// console.log("Order finalization was successful");
 	} catch (e) {
-		console.log(e);
 		await session.abortTransaction();
 		session.endSession();
 	}
