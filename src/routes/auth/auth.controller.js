@@ -55,9 +55,9 @@ const controllerAuthLocalRegister = asyncHandler(async (req, res) => {
 	// Create new user based on referrer
 	try {
 		await User.findOne({ _id: referrer });
-		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: false, referrer, is_admin: false });
+		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: true, referrer, is_admin: false });
 	} catch (e) {
-		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: false, is_admin: false });
+		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: true, is_admin: false });
 	}
 
 	// Send email for verification , set code and save user
