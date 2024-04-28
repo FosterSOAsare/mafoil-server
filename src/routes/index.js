@@ -10,6 +10,7 @@ const ordersRouter = require("./orders.route");
 const transactionRouter = require("./transactions.route");
 const notificationRouter = require("./notifications.route");
 const newsletterRouter = require("./newsletter.route");
+const contactRouter = require("./contact.route");
 const reviewsRouter = require("./reviews/reviews.router");
 
 const appRouter = express.Router();
@@ -24,6 +25,7 @@ appRouter.use("/orders", ordersRouter);
 appRouter.use("/transactions", transactionRouter);
 appRouter.use("/notifications", notificationRouter);
 appRouter.use("/newsletters", newsletterRouter);
+appRouter.use("/contact", contactRouter);
 appRouter.use("/reviews", reviewsRouter);
 
 module.exports = appRouter;

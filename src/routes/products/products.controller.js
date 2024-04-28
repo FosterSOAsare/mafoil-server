@@ -3,14 +3,15 @@ const Products = require("../../schemas/Products.schema");
 const createSlugName = require("../../utils/createSlugName");
 
 const getProducts = asyncHandler(async (req, res) => {
-	let { category, page } = req.query;
+	let { category, page, size } = req.query;
 	page = page ? page : 1;
+	size = size ? (size == "all" ? 0 : size) : 12;
 	let obj = category && category !== "all" ? { category } : {};
 	let totalCount = await Products.countDocuments(obj);
 	let response = await Products.find(obj)
 		.sort({ _id: 1 })
-		.limit(12)
-		.skip((page - 1) * 12);
+		.limit(size)
+		.skip((page - 1) * size);
 
 	res.status(200).json({ data: response, nextPage: totalCount > response.length + (page - 1) * 12 });
 });

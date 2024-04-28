@@ -6,18 +6,20 @@ const Reviews = require("../../schemas/Reviews.schema");
 const Notifications = require("../../schemas/Notification.schema");
 
 const getProductReviews = asyncHandler(async (req, res) => {
+	//  Sort based on createAt
 	let product = await Products.findOne({ slugname: req.params?.slugname }, { __v: 0 });
 	if (!product) {
 		res.status(404);
 		throw new Error("Product does not exist");
 	}
 
-	let reviews = await Reviews.find({ product: product?._id, status: "accepted" });
+	let reviews = await Reviews.find({ product: product?._id, status: "accepted" }).sort({ createdAt: -1 });
 	res.status(200).json(reviews);
 });
 const getPendingProductReviews = asyncHandler(async (req, res) => {
 	// await Reviews.updateMany({}, { $set: { status: "pending" } });
-	let reviews = await Reviews.find({ status: "pending" });
+	//  Sort based on createAt
+	let reviews = await Reviews.find({ status: "pending" }).sort({ createdAt: -1 });
 	res.status(200).json(reviews);
 });
 
