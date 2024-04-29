@@ -41,6 +41,14 @@ const productsSchema = mongoose.Schema(
 			type: [imagesSchema],
 		},
 		rating: ratingSchema,
+		itemsSold: {
+			type: Number,
+			default: 0,
+		},
+		inStock: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	{
 		timestamps: true,

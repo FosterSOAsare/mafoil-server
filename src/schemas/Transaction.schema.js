@@ -26,6 +26,9 @@ const transactionSchema = mongoose.Schema(
 		address: {
 			type: String,
 		},
+		session: {
+			type: String,
+		},
 	},
 	{
 		timestamps: true,

@@ -27,6 +27,9 @@ const orderSchema = mongoose.Schema(
 		totalPrice: Number,
 		totalProfit: Number,
 		status: String,
+		completionDate: {
+			type: Date,
+		},
 	},
 	{ timestamps: true }
 );

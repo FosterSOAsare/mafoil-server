@@ -4,6 +4,8 @@ const User = require("../../schemas/User.schema");
 const Transaction = require("../../schemas/Transaction.schema");
 const Notification = require("../../schemas/Notification.schema");
 
+const stripe = require("stripe")(process.env.stripe_key);
+
 const controllerGetUser = asyncHandler(async (req, res) => {
 	res.status(200).json(req?.session.user);
 });
@@ -128,6 +130,74 @@ const controllerWithdrawFunds = asyncHandler(async (req, res) => {
 	res.status(200).json({ success: true });
 });
 
+const controllerGenerateCheckoutSession = asyncHandler(async (req, res) => {
+	const { amount } = req.body;
+	console.log(amount);
+
+	const session = await stripe.checkout.sessions.create({
+		payment_method_types: ["card"],
+		line_items: [
+			{
+				price_data: {
+					currency: "usd",
+					product_data: {
+						name: `Deposit of funds`,
+						description: `User is depositing such amount into his wallet on mafo.il`,
+					},
+					unit_amount: 100 * amount, // Amount in cents
+				},
+				quantity: 1,
+			},
+		],
+		mode: "payment",
+		// {CHECKOUT_SESSION_ID} is a template for getting the session_id
+		success_url: `${process.env.CLIENT_URL}/account/transactions?status=deposit&session_id={CHECKOUT_SESSION_ID}`,
+		cancel_url: `${process.env.CLIENT_URL}/account/transactions?status=error`,
+	});
+
+	// Store session.id so that it can be retrieved later for verification
+
+	res.json({ url: session.url });
+});
+
+const controllerValidateCheckoutSession = asyncHandler(async (req, res) => {
+	// retrieve the session.id
+	await Transaction.updateMany({ status: "success" }, { $set: { status: "completed" } });
+	const { sessionId } = req.body;
+	const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+	if (session.payment_status === "paid") {
+		// Check if sess;ion has been used
+		const exists = await Transaction.findOne({ session: sessionId });
+		if (exists) {
+			res.status(401);
+			throw new Error("This session has already been recorded");
+		}
+		// Update as needed
+		let { amount_total: amount } = session;
+		amount = amount / 100;
+		await Transaction.create({
+			amount,
+			desc: `Deposit of $${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} into wallet`,
+			status: "completed",
+			type: "deposit",
+			session: sessionId,
+			user: req.session.user._id,
+		});
+		// Update balance
+		await User.updateOne({ _id: req.session.user._id }, { $inc: { balance: amount } });
+		// Add notification
+		await Notification.create({
+			link: "/account/transactions",
+			user: req.session.user._id,
+			desc: `Your deposit of $${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} was successful`,
+		});
+	} else {
+		res.status(400).json({ error: "The session was not completed since user didn't make payment" });
+	}
+	res.status(200).json({ message: "Validation was successful" });
+});
+
 module.exports = {
 	controllerGetUser,
 	controllerUpdateUserData,
@@ -136,4 +206,6 @@ module.exports = {
 	controllerUpdateNewsLetterSubscription,
 	controllerActivateAccount,
 	controllerWithdrawFunds,
+	controllerGenerateCheckoutSession,
+	controllerValidateCheckoutSession,
 };
