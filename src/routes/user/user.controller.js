@@ -113,7 +113,7 @@ const controllerWithdrawFunds = asyncHandler(async (req, res) => {
 	}
 	const user = await User.findOne({ _id: userId });
 
-	if (user?.balance < 40) {
+	if (user?.balance < amount) {
 		res.status(400);
 		throw new Error("You have insufficient funds to complete the transaction");
 	}
@@ -123,8 +123,11 @@ const controllerWithdrawFunds = asyncHandler(async (req, res) => {
 	const options = { session };
 	// Update balance
 	await User.updateOne({ _id: userId }, { $set: { activated: true }, $inc: { balance: -amount } }, options);
-	await Transaction.create({ type: "withdraw", amount: amount, status: "pending", desc: "Withdrawal from account", user: userId, address });
-	await Notification.create({ link: "/account/transactions", user: userId, desc: "Your withdrawal request has been received. Request should be complete within 1-3 days" });
+	// Conplete the withdrawal
+	await Transaction.create({ type: "withdraw", amount: amount, status: "completed", desc: "Withdrawal from account", user: userId, address });
+	// await Notification.create({ link: "/account/transactions", user: userId, desc: "Your withdrawal request has been received. Request should be complete within 1-3 days" });
+	await Notification.create({ link: "/account/transactions", user: userId, desc: "Your withdrawal request was successful..." });
+
 	await session.commitTransaction();
 	session.endSession();
 	res.status(200).json({ success: true });
@@ -132,7 +135,6 @@ const controllerWithdrawFunds = asyncHandler(async (req, res) => {
 
 const controllerGenerateCheckoutSession = asyncHandler(async (req, res) => {
 	const { amount } = req.body;
-	console.log(amount);
 
 	const session = await stripe.checkout.sessions.create({
 		payment_method_types: ["card"],
@@ -177,7 +179,7 @@ const controllerValidateCheckoutSession = asyncHandler(async (req, res) => {
 		let { amount_total: amount } = session;
 		amount = amount / 100;
 		await Transaction.create({
-			amount,
+			amount: amount * 12.78,
 			desc: `Deposit of $${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} into wallet`,
 			status: "completed",
 			type: "deposit",
@@ -185,7 +187,8 @@ const controllerValidateCheckoutSession = asyncHandler(async (req, res) => {
 			user: req.session.user._id,
 		});
 		// Update balance
-		await User.updateOne({ _id: req.session.user._id }, { $inc: { balance: amount } });
+		// Convert dollars to cedis by multiplying by 12.78
+		await User.updateOne({ _id: req.session.user._id }, { $inc: { balance: amount * 12.78 } });
 		// Add notification
 		await Notification.create({
 			link: "/account/transactions",

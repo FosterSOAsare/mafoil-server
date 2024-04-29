@@ -20,9 +20,9 @@ const getTxns = asyncHandler(async (req, res) => {
 	res.status(200).json(txns);
 });
 const getATxn = asyncHandler(async (req, res) => {
-	let obj = { user: req.session.user._id, _id: req.param.id };
+	let { id } = req.params;
 
-	let txn = await Transaction.find(obj, { __v: 0, user: 0, updatedAt: 0 }).sort({ createdAt: -1 });
+	let txn = await Transaction.findOne({ _id: id }, { __v: 0, user: 0, updatedAt: 0 }).sort({ createdAt: -1 });
 	if (!txn) {
 		res.status(404);
 		throw new Error("The transaction does not exist");
