@@ -125,7 +125,7 @@ const cancelAnOrder = asyncHandler(async (req, res) => {
 ordersRouter.get("/", user, getOrders);
 ordersRouter.get("/admin", user, admin, getAllOrders);
 ordersRouter.get("/:orderId", user, getAnOrder);
-ordersRouter.get("/cancel/:orderId", user, cancelAnOrder);
+ordersRouter.post("/cancel/:orderId", user, cancelAnOrder);
 // ordersRouter.post("/", user, insertUserCart);
 
 module.exports = ordersRouter;

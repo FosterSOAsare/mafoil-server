@@ -126,7 +126,11 @@ const controllerWithdrawFunds = asyncHandler(async (req, res) => {
 	// Conplete the withdrawal
 	await Transaction.create({ type: "withdraw", amount: amount, status: "completed", desc: "Withdrawal from account", user: userId, address });
 	// await Notification.create({ link: "/account/transactions", user: userId, desc: "Your withdrawal request has been received. Request should be complete within 1-3 days" });
-	await Notification.create({ link: "/account/transactions", user: userId, desc: "Your withdrawal request was successful..." });
+	await Notification.create({
+		link: "/account/transactions",
+		user: userId,
+		desc: `Your withdrawal request of GH₵${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} was successful...`,
+	});
 
 	await session.commitTransaction();
 	session.endSession();
