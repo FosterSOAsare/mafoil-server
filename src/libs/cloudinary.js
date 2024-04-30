@@ -25,7 +25,7 @@ async function getSecuredUrl(file) {
 }
 
 async function deleteFile(public_id) {
-	await cloudinary.uploader.destroy(public_id);
+	await cloudinary.v2.uploader.destroy(public_id);
 	return true;
 }
 const randImageName = (fileType, bytes = 32) => {

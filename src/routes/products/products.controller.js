@@ -1,20 +1,17 @@
 const asyncHandler = require("express-async-handler");
 const Products = require("../../schemas/Products.schema");
 const createSlugName = require("../../utils/createSlugName");
-const Reviews = require("../../schemas/Reviews.schema");
 
 const getProducts = asyncHandler(async (req, res) => {
-	let { category, page } = req.query;
+	let { category, page, size } = req.query;
 	page = page ? page : 1;
+	size = size ? (size == "all" ? 0 : size) : 12;
 	let obj = category && category !== "all" ? { category } : {};
 	let totalCount = await Products.countDocuments(obj);
 	let response = await Products.find(obj)
 		.sort({ _id: 1 })
-		.limit(12)
-		.skip((page - 1) * 12);
-	response = response.map((r) => {
-		return { ...r._doc, rating: 0, totalRatings: 0 };
-	});
+		.limit(size)
+		.skip((page - 1) * size);
 
 	res.status(200).json({ data: response, nextPage: totalCount > response.length + (page - 1) * 12 });
 });
@@ -26,48 +23,12 @@ const getProductRecommendations = asyncHandler(async (req, res) => {
 		throw new Error("Product does not exist");
 	}
 	let recommendations = await Products.find({ category: product?.category, slugname: { $not: { $eq: product?.slugname } } }).limit(4);
-	recommendations = recommendations.map((re) => ({ ...re?._doc, rating: 0, totalRatings: 0 }));
 	res.status(200).json(recommendations);
-});
-
-const getProductReviews = asyncHandler(async (req, res) => {
-	let product = await Products.findOne({ slugname: req.params?.slugname }, { __v: 0 });
-	if (!product) {
-		res.status(404);
-		throw new Error("Product does not exist");
-	}
-	let reviews = await Reviews.find({ product: product?._id, status: "approved" });
-	res.status(200).json(reviews);
-});
-
-const postAProductReview = asyncHandler(async (req, res) => {
-	const { fullname, email, _id } = req.session.user;
-	let { title, rating, comment } = req.body;
-	if (!title || typeof rating !== "number" || !comment) {
-		res.status(400);
-		throw new Error("Provide all necessary parameters");
-	}
-	if (rating > 5) {
-		res.status(400);
-		throw new Error("The provided rating value in invalid, must be less than or equal to 5");
-	}
-	let product = await Products.findOne({ slugname: req.params?.slugname }, { __v: 0 });
-	if (!product) {
-		res.status(404);
-		throw new Error("Product does not exist");
-	}
-
-	console.log({ title, rating, user: _id, email, comment, name: fullname, product: product?._id, email });
-	await Reviews.create({ title, rating, user: _id, email, comment, name: fullname, product: product?._id, email, status: "pending" });
-
-	res.status(200).json({ success: true });
 });
 
 const getRecentProducts = asyncHandler(async (req, res) => {
 	let { recents } = req.body;
 	recents = await Products.find({ slugname: { $in: recents } });
-
-	recents = recents.map((recent) => ({ ...recent?._doc, rating: 0, totalRatings: 0 }));
 
 	res.status(200).json(recents);
 });
@@ -80,9 +41,8 @@ const getAProduct = asyncHandler(async (req, res) => {
 		res.status(404);
 		throw new Error("Product was not found");
 	}
-	product = product?._doc;
 
-	res.status(200).json({ ...product, rating: 0, totalRatings: 0 });
+	res.status(200).json(product);
 });
 const deleteAProduct = asyncHandler(async (req, res) => {
 	let { slugname } = req.query;
@@ -98,7 +58,7 @@ const getProductForEdit = asyncHandler(async (req, res) => {
 		res.status(404);
 		throw new Error("Product was not found");
 	}
-	product = { ...product?._doc, rating: 0, totalRatings: 0, price: "" + product?._doc?.price };
+
 	res.status(200).json(product);
 });
 
@@ -121,7 +81,6 @@ const updateAProduct = asyncHandler(async (req, res) => {
 		// Check slugname
 		newSlugname = createSlugName(name);
 		const product = await Products.findOne({ slugname: newSlugname });
-		console.log(product);
 		if (product) {
 			res.status(400);
 			throw new Error("A product with this particular name exists. Please change the name");
@@ -171,6 +130,4 @@ module.exports = {
 	fetchCategoriesInfo,
 	getProductRecommendations,
 	getRecentProducts,
-	getProductReviews,
-	postAProductReview,
 };

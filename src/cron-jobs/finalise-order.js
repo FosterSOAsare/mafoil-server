@@ -34,7 +34,7 @@ const finalizeOrder = asyncHandler(async () => {
 		await Notification.create(
 			[
 				{ link: `/orders/${order._id}`, user, desc: "Your order has been completed." },
-				{ link: `/account/transactions`, user, desc: `You received a profit of ${totalProfit} from your order` },
+				// { link: `/account/transactions`, user, desc: `You received a profit of ${totalProfit} from your order` },
 			],
 			options
 		);
@@ -43,14 +43,13 @@ const finalizeOrder = asyncHandler(async () => {
 		await Transaction.create([{ type: "deposit", amount: total, status: "completed", desc: "Order finalization", user }], options);
 
 		// Update user's balance
-		await User.updateOne({ _id: user }, { $inc: { balance: total } }, options);
+		// await User.updateOne({ _id: user }, { $inc: { balance: total } }, options);
 
 		await session.commitTransaction();
 		session.endSession();
 
-		// console.log("Order finalization was successful");
+		console.log("Order finalized successfully...");
 	} catch (e) {
-		console.log(e);
 		await session.abortTransaction();
 		session.endSession();
 	}

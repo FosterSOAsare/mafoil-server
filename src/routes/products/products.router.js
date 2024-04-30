@@ -9,8 +9,6 @@ const {
 	fetchCategoriesInfo,
 	getProductRecommendations,
 	getRecentProducts,
-	getProductReviews,
-	postAProductReview,
 } = require("./products.controller");
 
 const productsRouter = express.Router();
@@ -24,8 +22,6 @@ productsRouter.get("/:slugname", getAProduct);
 productsRouter.delete("/", user, admin, deleteAProduct);
 productsRouter.put("/:slugname", user, admin, updateAProduct);
 productsRouter.get("/:slugname/recommendations", getProductRecommendations);
-productsRouter.get("/:slugname/reviews", getProductReviews);
-productsRouter.post("/:slugname/reviews", user, postAProductReview);
 productsRouter.post("/recents", getRecentProducts);
 productsRouter.post("/", user, admin, createAProduct);
 
