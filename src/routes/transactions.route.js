@@ -16,7 +16,7 @@ const getTxns = asyncHandler(async (req, res) => {
 		obj = { ...obj, status: filter };
 	}
 	// await Transaction.updateMany({ status: "complete" }, { $set: { status: "completed" } });
-	let txns = await Transaction.find(obj, { __v: 0, user: 0, updatedAt: 0 }).sort({ createdAt: -1 });
+	let txns = await Transaction.find(obj, { __v: 0, user: 0, updatedAt: 0 }).sort({ createdAt: -1 }).limit(20);
 	res.status(200).json(txns);
 });
 const getATxn = asyncHandler(async (req, res) => {

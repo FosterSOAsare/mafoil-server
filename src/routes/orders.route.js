@@ -30,7 +30,7 @@ const getOrders = asyncHandler(async (req, res) => {
 		obj = { ...obj, status: filter };
 	}
 
-	let orders = await Order.find(obj).sort({ createdAt: -1 });
+	let orders = await Order.find(obj).sort({ createdAt: -1 }).limit(20);
 	orders = orders.map((order) => {
 		const { status, totalProfit, totalPrice, avgProfitPercent, createdAt, _id } = order;
 		return { status, totalPrice, totalProfit, avgProfitPercent, createdAt, _id };
