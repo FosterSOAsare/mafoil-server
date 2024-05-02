@@ -6,7 +6,7 @@ const Notification = require("../schemas/Notification.schema");
 const notificationsRouter = express.Router();
 
 const controllerGetNotifications = asyncHandler(async (req, res) => {
-	const notifications = await Notification.find({}, { __v: 0, updatedAt: 0, createdAt: 0, user: 0 }).sort({ createdAt: -1 });
+	const notifications = await Notification.find({ user: req.session.user._id }, { __v: 0, updatedAt: 0, createdAt: 0, user: 0 }).sort({ createdAt: -1 });
 
 	// Group notifications based on status
 	let priority = { read: 2, unread: 1 };

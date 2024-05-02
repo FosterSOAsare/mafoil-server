@@ -18,7 +18,7 @@ const sendEmail = asyncHandler(async (subject, message, to, reply_to) => {
 		},
 	});
 	await transporter.sendMail({
-		from: `Mail.fo <${process.env.EMAIL_ADDRESS}>`,
+		from: `Mafo.il <${process.env.EMAIL_ADDRESS}>`,
 		to: to,
 		subject: subject,
 		html: message,
@@ -56,24 +56,28 @@ const sendEmailVerificationEmail = asyncHandler(async (email, code) => {
 	console.log("Email verification mail sent to " + email + " code is " + code);
 });
 const sendContactEmail = asyncHandler(async (data) => {
-	const { name, email, message, subject, site } = data;
-	let template = fs.readFileSync(path.join(__dirname, "..", "email-templates", `${site === "xennol" ? "xennol-contact.html" : "contact-us.html"}`), "utf-8");
+	const { email, message, title, ticket } = data;
+	let template = fs.readFileSync(path.join(__dirname, "..", "email-templates", "contact-us.html"), "utf-8");
 	let keys = [
 		{
 			tag: "{{ MESSAGE }}",
 			value: message,
 		},
 		{
-			tag: "{{ SUBJECT }}",
-			value: subject,
+			tag: "{{ TITLE }}",
+			value: title,
 		},
 		{
-			tag: "{{ NAME }}",
-			value: name,
+			tag: "{{ TICKETID }}",
+			value: ticket ? ticket : "-",
+		},
+		{
+			tag: "{{ EMAIL }}",
+			value: email,
 		},
 	];
 	let emailMessage = replaceKeys(template, keys);
-	await sendEmail(subject, emailMessage, site === "xennol" ? process.env.XENNOL_SUPPORT_EMAIL : process.env.SUPPORT_EMAIL, email, "xennol");
+	await sendEmail("Action Needed - New Contact Msg Received", emailMessage, process.env.SUPPORT_EMAIL, email);
 });
 
 module.exports = { sendPasswordResetEmail, sendEmailVerificationEmail, sendContactEmail };

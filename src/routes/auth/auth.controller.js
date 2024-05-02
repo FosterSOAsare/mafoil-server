@@ -53,11 +53,11 @@ const controllerAuthLocalRegister = asyncHandler(async (req, res) => {
 		throw new Error("User already exists , please sign in");
 	}
 	// Create new user based on referrer
-	try {
-		await User.findOne({ _id: referrer });
-		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: true, referrer, is_admin: false });
-	} catch (e) {
-		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, verified: true, is_admin: false });
+	let refAccount = await User.findOne({ _id: referrer });
+	if (refAccount) {
+		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, activated: true, verified: false, referrer, is_admin: false });
+	} else {
+		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, activated: true, verified: false, is_admin: false });
 	}
 
 	// Send email for verification , set code and save user

@@ -120,6 +120,12 @@ const fetchCategoriesInfo = asyncHandler(async (req, res) => {
 
 	res.status(200).json({ cloth, shoe, bag, accessories, all });
 });
+
+const searchProducts = asyncHandler(async (req, res) => {
+	let { searchText } = req.query;
+	let products = searchText ? await Products.find({ name: { $regex: searchText, $options: "i" } }) : await Products.aggregate([{ $sample: { size: 12 } }]);
+	res.status(200).json(products);
+});
 module.exports = {
 	getProducts,
 	getAProduct,
@@ -130,4 +136,5 @@ module.exports = {
 	fetchCategoriesInfo,
 	getProductRecommendations,
 	getRecentProducts,
+	searchProducts,
 };

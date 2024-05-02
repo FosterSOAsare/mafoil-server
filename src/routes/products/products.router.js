@@ -9,6 +9,7 @@ const {
 	fetchCategoriesInfo,
 	getProductRecommendations,
 	getRecentProducts,
+	searchProducts,
 } = require("./products.controller");
 
 const productsRouter = express.Router();
@@ -17,6 +18,7 @@ const admin = require("../../middlewares/admin.middleware");
 
 productsRouter.get("/", getProducts);
 productsRouter.get("/edit/:slugname", getProductForEdit);
+productsRouter.get("/search", searchProducts);
 productsRouter.get("/categories", fetchCategoriesInfo);
 productsRouter.get("/:slugname", getAProduct);
 productsRouter.delete("/", user, admin, deleteAProduct);
