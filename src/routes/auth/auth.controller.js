@@ -1,4 +1,6 @@
 const asyncHandler = require("express-async-handler");
+const jwt = require("jsonwebtoken");
+
 const User = require("../../schemas/User.schema");
 const generateCode = require("../../utils/generateCode");
 const { sendPasswordResetEmail, sendEmailVerificationEmail } = require("../../libs/nodemailer");
@@ -35,9 +37,15 @@ const controllerAuthLocalLogin = asyncHandler(async (req, res) => {
 	}
 
 	const { fullname, activated, _id, balance, subscribed, is_admin } = user;
-	req.session.user = { _id };
-	req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
-	res.status(200).json({ email, fullname, activated, _id, balance, is_admin, subscribed });
+	// req.session.user = { _id };
+	// req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
+
+	// Set a jwt here
+	const token = jwt.sign({ userId: _id, email }, process.env.SECRET, {
+		expiresIn: "30d",
+	});
+
+	res.status(200).json({ email, fullname, activated, _id, balance, is_admin, subscribed, token });
 });
 const controllerAuthLocalRegister = asyncHandler(async (req, res) => {
 	let { email, password, fullname, referrer } = req.body;
