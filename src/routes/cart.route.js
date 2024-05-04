@@ -112,11 +112,11 @@ const checkoutCart = asyncHandler(async (req, res) => {
 		// TODO : Insert transaction
 		await Cart.deleteOne({ user: req.session.user._id }, options);
 		await session.commitTransaction();
-		session.endSession();
+		await session.endSession();
 		res.status(200).json({ total: totalPrice, success: true });
 	} catch (e) {
-		await session.commitTransaction();
-		session.endSession();
+		await session.abortTransaction();
+		await session.endSession();
 		res.status(400);
 		throw new Error("An error occurred while checking out cart");
 	}
