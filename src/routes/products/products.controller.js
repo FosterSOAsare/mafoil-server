@@ -46,7 +46,12 @@ const getAProduct = asyncHandler(async (req, res) => {
 });
 const deleteAProduct = asyncHandler(async (req, res) => {
 	let { slugname } = req.query;
-	res.json({ data: "okay" });
+	const product = await Products.findOne({ slugname });
+	if (!product) {
+		res.status(404);
+		throw new Error("The requested product does not exist");
+	}
+	res.json({ success: true, message: "Product was succesfully deleted..." });
 });
 
 const getProductForEdit = asyncHandler(async (req, res) => {
