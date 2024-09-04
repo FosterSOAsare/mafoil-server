@@ -1,0 +1,25 @@
+Adding env to docker
+
+1. Create a .env File
+2. docker build -t fostersoasare/mafoil
+3. Pass the environment when running the image
+  docker run --env-file .env -p 8000:8000 fostersoasare/mafoil
+
+
+Login to docker 
+When you use google to login to docker , you will need to generate tokens and use it as password
+- Account Settings
+- In the Security section, select Personal access tokens.
+- Generate new token.
+- Add a description for your token
+- Set the access permissions
+- Generate 
+
+docker login
+Enter username 
+Paste password : NB: The keystrokes don't show when you paste password
+
+WSL Error on Windows 11
+Run cmd as an admin
+- wsl --uninstall
+- wsl --install
