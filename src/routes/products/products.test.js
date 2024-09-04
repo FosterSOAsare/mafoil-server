@@ -5,7 +5,7 @@ request = request(app);
 
 const authorization =
 	"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NTEwMDdlNGExYWJmYjQwMjE4MGQ2NzUiLCJlbWFpbCI6ImFzYXJlNHN0ZXJAZ21haWwuY29tIiwiaWF0IjoxNzI0NjA1OTU4LCJleHAiOjE3MjcxOTc5NTh9.xIpX9BpUdVqz08ykraE6SN4_hDytVYjgByOx9d_YsOA";
-const postId = "";
+const slugname = "";
 
 beforeAll(async () => {
 	await connectDB();
@@ -53,8 +53,25 @@ describe("POST A PRODUCT", () => {
 		expect(response.body).toBeDefined();
 		expect(response.body).toMatchObject({ error: "Please provide all necessary information" });
 	});
-});
 
+	// Only an admin can post a product
+
+	// Should be succesful
+});
+describe("DELETE A PRODUCT", () => {
+	test("Should return forbidden when user is not authorized", async () => {
+		await request.delete("/api/products/tyeus").expect(403);
+	});
+
+	test("Should return an error when the product is not found", async () => {
+		const response = await request.delete("/api/products/random-product").expect(404);
+		expect(response.body).toMatchObject({ error: "The requested product does not exist" });
+	});
+
+	// Only an admin can delete a product
+
+	// Should be succesfully deleted
+});
 afterAll(async () => {
 	await disconnectDB();
 });

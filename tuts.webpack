@@ -1,0 +1,73 @@
+npm install --save-dev webpack webpack-cli webpack-node-externals webpack-obfuscator
+npm install --save-dev babel-loader @babel/core @babel/preset-env
+
+const path = require("path");
+const nodeExternals = require("webpack-node-externals");
+const JavaScriptObfuscator = require("webpack-obfuscator");
+
+module.exports = {
+	mode: "production",
+	entry: "./src/server.js", // Replace with the entry point of your Node.js app
+	target: "node", // Specifies that the bundle should be compatible with Node.js
+	output: {
+		path: path.resolve(__dirname, "dist"),
+		filename: "app.bundle.js", // The bundled output file
+		chunkFilename: "[name].chunk.js",
+	},
+	optimization: {
+		splitChunks: {
+			chunks: "all",
+			minSize: 30000,
+			maxAsyncRequests: 5,
+			maxInitialRequests: 3,
+			automaticNameDelimiter: "~",
+			cacheGroups: {
+				vendors: {
+					test: /[\\/]node_modules[\\/]/,
+					name: "vendors",
+					chunks: "all",
+					priority: -10,
+				},
+				default: {
+					minChunks: 2,
+					priority: -20,
+					reuseExistingChunk: true,
+				},
+			},
+		},
+	},
+	externals: [nodeExternals()], // Exclude node_modules from the bundle
+	module: {
+		rules: [
+			{
+				test: /\.js$/,
+				exclude: /node_modules/,
+				use: {
+					loader: "babel-loader",
+					options: {
+						presets: ["@babel/preset-env"], // Transpile modern JS to older versions for compatibility
+					},
+				},
+			},
+		],
+	},
+	plugins: [
+		new JavaScriptObfuscator(
+			{
+				rotateStringArray: true, // Rotate string arrays to make reverse engineering harder
+				stringArray: true,
+				stringArrayThreshold: 0.75, // Obfuscate a significant portion of strings
+				compact: true, // Minimize the size of the output
+				controlFlowFlattening: true, // Increases code complexity
+				deadCodeInjection: true, // Injects dead (unreachable) code to increase file size and confuse de-obfuscators
+				deadCodeInjectionThreshold: 0.4,
+				debugProtection: true, // Prevents the code from running in the developer console
+				// debugProtectionInterval: true, // If the code is paused, it will break the debugger
+			},
+			["excluded_bundle.js"] // Exclude specific files from obfuscation if necessary
+		),
+	],
+	resolve: {
+		extensions: [".js"], // Resolve these file extensions
+	},
+};
