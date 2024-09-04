@@ -71,3 +71,6 @@ module.exports = {
 		extensions: [".js"], // Resolve these file extensions
 	},
 };
+
+
+With the provided configuration, there should be a node_modules folder in the environment we choose to work with
