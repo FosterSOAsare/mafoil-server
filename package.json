@@ -35,7 +35,7 @@
 	},
 	"scripts": {
 		"dev": "nodemon ./src/server.js",
-		"start": "node ./src/server.js",
+		"start": "node ./dist/app.bundle.js",
 		"test": "jest --watch"
 	},
 	"author": "",

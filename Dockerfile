@@ -5,7 +5,7 @@ FROM node:16-slim
 WORKDIR /app
 
 # Copy only the built application files from the local dist folder to the container
-COPY dist/app.bundle.js /app/dist
+COPY /dist /app/dist
 
 # Copy package.json and package-lock.json (or yarn.lock) to the working directory
 COPY package*.json ./
@@ -17,7 +17,7 @@ RUN npm install --only=production
 ENV NODE_ENV=production
 
 # Command to run the application
-CMD ["node", "dist/app.bundle.js"]
+CMD npm run start
 
 # Expose the port your application runs on
 EXPOSE 8000
