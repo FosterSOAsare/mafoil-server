@@ -1,5 +1,7 @@
 npm install --save-dev webpack webpack-cli webpack-node-externals webpack-obfuscator
 npm install --save-dev babel-loader @babel/core @babel/preset-env
+For typesript
+npm install --save-dev webpack webpack-cli ts-loader typescript
 
 const path = require("path");
 const nodeExternals = require("webpack-node-externals");
@@ -49,6 +51,11 @@ module.exports = {
 					},
 				},
 			},
+      {
+        test: /\.tsx?$/,  // Target .ts and .tsx files
+        use: 'ts-loader', // Use ts-loader for TypeScript
+        exclude: /node_modules/,
+      },
 		],
 	},
 	plugins: [
