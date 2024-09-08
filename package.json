@@ -35,8 +35,10 @@
 	},
 	"scripts": {
 		"dev": "nodemon ./src/server.js",
-		"start": "node ./dist/app.bundle.js",
-		"test": "jest --watch"
+		"server": "node ./dist/app.bundle.js",
+		"test": "jest --watch",
+		"build": "npx  webpack",
+		"start": "npm run build && npm run server"
 	},
 	"author": "",
 	"license": "ISC",
