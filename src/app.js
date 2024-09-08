@@ -22,7 +22,11 @@ let initialObj = {
 	},
 };
 
-app.use(cors());
+app.use(
+	cors({
+		origin: process.env?.NODE_ENV === "production" ? ["https://mafoil.vercel.app", "https://crons-gd5m.onrender.com"] : "*",
+	})
+);
 app.use(morgan("combined"));
 app.use(session(initialObj));
 app.use("/api", appRouter);
