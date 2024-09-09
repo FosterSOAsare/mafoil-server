@@ -8,31 +8,37 @@ module.exports = {
 	target: "node", // Specifies that the bundle should be compatible with Node.js
 	output: {
 		path: path.resolve(__dirname, "dist"),
-		filename: "app.bundle.js", // The bundled output file
-		chunkFilename: "[name].chunk.js",
+		filename: "[name].bundle.js", // The bundled output file
+		chunkFilename: "[name].[contenthash].chunk.js",
 	},
 	optimization: {
 		splitChunks: {
-			chunks: "all",
-			minSize: 30000,
-			maxAsyncRequests: 5,
-			maxInitialRequests: 3,
+			chunks: "all", // Apply to both dynamic and initial imports
+			minSize: 30000, // Minimum size of a chunk to be split
+			maxAsyncRequests: 5, // Maximum async requests
+			maxInitialRequests: 3, // Maximum initial requests
 			automaticNameDelimiter: "~",
 			cacheGroups: {
 				vendors: {
 					test: /[\\/]node_modules[\\/]/,
-					name: "vendors",
+					name(module) {
+						// Get the name of the module being split
+						const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
+						return `vendors~${packageName}`;
+					},
 					chunks: "all",
-					priority: -10,
+					enforce: true, // Ensure vendors chunk is created
 				},
 				default: {
 					minChunks: 2,
 					priority: -20,
 					reuseExistingChunk: true,
+					enforce: true, // Ensure default chunk is created only when necessary
 				},
 			},
 		},
 	},
+
 	externals: [nodeExternals()], // Exclude node_modules from the bundle
 	module: {
 		rules: [

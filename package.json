@@ -35,7 +35,7 @@
 	},
 	"scripts": {
 		"dev": "nodemon ./src/server.js",
-		"serve": "node ./dist/app.bundle.js",
+		"serve": "node ./dist/main.bundle.js",
 		"test": "jest --watch",
 		"build": "npx webpack",
 		"start": "npm run build && npm run server"
