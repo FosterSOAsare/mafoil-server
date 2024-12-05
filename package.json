@@ -2,10 +2,11 @@
 	"dependencies": {
 		"bcrypt": "^5.1.1",
 		"cloudinary": "^1.40.0",
+		"connect-mongo": "^5.1.0",
 		"cors": "^2.8.5",
 		"datauri": "^4.1.0",
 		"dotenv": "^16.3.1",
-		"express": "^4.19.2",
+		"express": "^4.21.1",
 		"express-async-handler": "^1.2.0",
 		"express-session": "^1.17.3",
 		"helmet": "^7.0.0",
@@ -35,10 +36,11 @@
 	},
 	"scripts": {
 		"dev": "nodemon ./src/server.js",
+		"docker": "node ./server.js",
 		"serve": "node ./dist/main.bundle.js",
 		"test": "jest --watch",
 		"build": "npx webpack",
-		"start": "npm run build && npm run server"
+		"start": "npm run build && npm run serve"
 	},
 	"author": "",
 	"license": "ISC",

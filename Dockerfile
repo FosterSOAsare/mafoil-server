@@ -9,6 +9,7 @@ COPY /dist /app/dist
 
 # Copy package.json and package-lock.json (or yarn.lock) to the working directory
 COPY package*.json ./
+COPY /.env /app/.env
 
 # Install only production dependencies
 RUN npm install --only=production
@@ -17,7 +18,7 @@ RUN npm install --only=production
 ENV NODE_ENV=production
 
 # Command to run the application
-CMD npm run start
+CMD npm run serve
 
 # Expose the port your application runs on
 EXPOSE 8000

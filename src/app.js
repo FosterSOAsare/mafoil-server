@@ -4,6 +4,7 @@ const morgan = require("morgan");
 const session = require("express-session");
 
 const error = require("./middlewares/error.middleware");
+const store = require("./libs/connect-mongo");
 
 // const helmet = require("helmet");
 const appRouter = require("./routes");
@@ -20,6 +21,7 @@ let initialObj = {
 		sameSite: "strict",
 		secure: process.env?.NODE_ENV === "production",
 	},
+	store: store,
 };
 
 app.use(
