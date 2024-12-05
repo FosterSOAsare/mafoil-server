@@ -11,7 +11,11 @@ module.exports = {
 		filename: "[name].bundle.js", // The bundled output file
 	},
 
-	externals: [nodeExternals()], // Exclude node_modules from the bundle
+	externals: [
+		nodeExternals({
+			allowlist: ["form-data"], // Include 'form-data' in the bundle
+		}),
+	], // Exclude node_modules from the bundle
 	module: {
 		rules: [
 			{
