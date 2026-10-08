@@ -36,11 +36,8 @@
 	},
 	"scripts": {
 		"dev": "node --watch ./src/server.js",
-		"docker": "node ./server.js",
-		"serve": "node ./dist/main.bundle.js",
-		"test": "jest --watch",
-		"build": "npx webpack",
-		"start": "npm run build && npm run serve"
+		"start": "node ./src/server.js",
+		"test": "jest --watch"
 	},
 	"author": "",
 	"license": "ISC",
