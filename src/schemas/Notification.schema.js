@@ -9,6 +9,7 @@ const notificationSchema = mongoose.Schema(
 		},
 		status: {
 			type: String,
+			enum: ["unread", "read"],
 			default: "unread",
 		},
 		desc: {

@@ -15,6 +15,7 @@ const productsSchema = mongoose.Schema(
 		price: {
 			required: true,
 			type: Number,
+			min: 0.01,
 		},
 		old_price: {
 			required: false,
@@ -27,12 +28,15 @@ const productsSchema = mongoose.Schema(
 		slugname: {
 			required: true,
 			type: String,
+			unique: true,
 		},
 		long_desc: {
 			type: String,
 		},
 		category: {
 			type: String,
+			enum: ["cloth", "shoe", "bag", "accessories"],
+			index: true,
 		},
 		store: {
 			type: String,

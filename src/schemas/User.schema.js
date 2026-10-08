@@ -6,6 +6,9 @@ const userSchema = mongoose.Schema(
 		email: {
 			required: true,
 			type: String,
+			lowercase: true,
+			trim: true,
+			unique: true,
 		},
 		password: {
 			required: true,
@@ -31,6 +34,7 @@ const userSchema = mongoose.Schema(
 		balance: {
 			type: Number,
 			default: 0,
+			min: 0,
 		},
 		activated: {
 			type: Boolean,

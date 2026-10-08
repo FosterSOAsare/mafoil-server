@@ -7,7 +7,8 @@ const Notification = require("../schemas/Notification.schema");
 const notificationsRouter = express.Router();
 
 const controllerGetNotifications = asyncHandler(async (req, res) => {
-	const notifications = await Notification.find({ user: req.user._id }, { __v: 0, updatedAt: 0, createdAt: 0, user: 0 }).sort({ createdAt: -1 });
+	// Capped: read notifications are deleted after 2 days, so this is the recent history
+	const notifications = await Notification.find({ user: req.user._id }, { __v: 0, updatedAt: 0, createdAt: 0, user: 0 }).sort({ createdAt: -1 }).limit(100);
 
 	// Group notifications based on status
 	let priority = { read: 2, unread: 1 };

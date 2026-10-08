@@ -1,16 +1,25 @@
-require("dotenv").config();
+// Converts thrown errors into { error: message } JSON responses
 function errors(err, req, res, next) {
+	if (res.headersSent) return next(err);
+
 	if (err?.status) res.status(err.status);
-	res.statusCode === 200 && res.status(500);
-	let errs = ["InternalOAuthError", "TokenError", "AuthenticationError", "AuthorizationError", "ValidationError", "ProviderError"];
-	if (err) {
-		if (errs.includes(err.name)) {
-			res.redirect(`${process.env.CLIENT_URL}/auth/login?error=${err.name}&errorType=oauth`);
-			return;
-		}
-		res.json({ error: err.message });
-	}
-	console.log({ error: err });
+	// Invalid input caught by Mongoose (schema validators, bad ObjectIds) is a client error
+	if (err?.name === "ValidationError" || err?.name === "CastError") res.status(400);
+	// Unique index violation
+	if (err?.code === 11000) res.status(409);
+	if (res.statusCode < 400) res.status(500);
+
+	const isServerError = res.statusCode >= 500;
+	const messages = {
+		ValidationError: "The provided data is invalid",
+		CastError: "The provided data is invalid",
+	};
+	let message = err?.code === 11000 ? "This record already exists" : messages[err?.name] || err?.message;
+	// Don't leak internal error details (database, library messages) for unexpected failures
+	if (isServerError && !err?.expose) message = "Something went wrong. Please try again later.";
+
+	if (isServerError) console.error(err);
+	res.json({ error: message });
 }
 
 module.exports = errors;

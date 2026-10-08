@@ -3,13 +3,15 @@ const user = require("../middlewares/user.middleware");
 const admin = require("../middlewares/admin.middleware");
 const asyncHandler = require("express-async-handler");
 const Newsletter = require("../schemas/Newsletter.schema");
+const { getPagination } = require("../utils/validate");
 
 const newsletterRouter = express.Router();
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const controllerGetNewsletters = asyncHandler(async (req, res) => {
-	const newsletter = await Newsletter.find({}, { __v: 0, updatedAt: 0, createdAt: 0 }).sort({ createdAt: -1 });
+	const { limit, skip } = getPagination(req.query);
+	const newsletter = await Newsletter.find({}, { __v: 0, updatedAt: 0, createdAt: 0 }).sort({ createdAt: -1 }).skip(skip).limit(limit);
 	res.status(200).json(newsletter);
 });
 

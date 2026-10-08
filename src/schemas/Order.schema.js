@@ -26,7 +26,7 @@ const orderSchema = mongoose.Schema(
 		avgProfitPercent: Number,
 		totalPrice: Number,
 		totalProfit: Number,
-		status: String,
+		status: { type: String, enum: ["pending", "completed", "cancelled"], required: true },
 		completionDate: {
 			type: Date,
 		},

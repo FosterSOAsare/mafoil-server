@@ -5,9 +5,13 @@ const newsletterSchema = mongoose.Schema(
 		email: {
 			type: String,
 			required: true,
+			lowercase: true,
+			trim: true,
+			unique: true,
 		},
 		status: {
 			type: String,
+			enum: ["active", "inactive"],
 			default: "active",
 		},
 		code: {

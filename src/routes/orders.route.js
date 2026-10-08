@@ -12,6 +12,12 @@ const ordersRouter = express.Router();
 const Transaction = require("../schemas/Transaction.schema");
 const Notification = require("../schemas/Notification.schema");
 const HttpError = require("../utils/http-error");
+const { getPagination } = require("../utils/validate");
+
+const ORDER_STATUSES = ["pending", "completed", "cancelled"];
+// Only known statuses filter the list; anything else (including "all") lists every status
+const statusFilter = (filter) => (ORDER_STATUSES.includes(filter) ? { status: filter } : {});
+const summarize = ({ status, totalProfit, totalPrice, avgProfitPercent, createdAt, _id }) => ({ status, totalPrice, totalProfit, avgProfitPercent, createdAt, _id });
 
 function createPercentage(createdAt, endDate) {
 	let today = new Date().getTime();
@@ -23,37 +29,18 @@ function createPercentage(createdAt, endDate) {
 	return percent;
 }
 const getOrders = asyncHandler(async (req, res) => {
-	let { filter } = req.query;
-	filter = filter ? filter : "all";
-
-	let obj = { user: req.user._id };
-	if (filter !== "all") {
-		obj = { ...obj, status: filter };
-	}
-
-	let orders = await Order.find(obj).sort({ createdAt: -1 }).limit(20);
-	orders = orders.map((order) => {
-		const { status, totalProfit, totalPrice, avgProfitPercent, createdAt, _id } = order;
-		return { status, totalPrice, totalProfit, avgProfitPercent, createdAt, _id };
-	});
-	res.status(200).json(orders);
+	const { limit, skip } = getPagination(req.query, { defaultLimit: 20 });
+	const orders = await Order.find({ user: req.user._id, ...statusFilter(req.query.filter) })
+		.sort({ createdAt: -1 })
+		.skip(skip)
+		.limit(limit);
+	res.status(200).json(orders.map(summarize));
 });
 
 const getAllOrders = asyncHandler(async (req, res) => {
-	let { filter } = req.query;
-	filter = filter ? filter : "all";
-
-	let obj = {};
-	if (filter !== "all") {
-		obj = { ...obj, status: filter };
-	}
-
-	let orders = await Order.find(obj).sort({ createdAt: -1 });
-	orders = orders.map((order) => {
-		const { status, totalProfit, totalPrice, avgProfitPercent, createdAt, _id } = order;
-		return { status, totalPrice, totalProfit, avgProfitPercent, createdAt, _id };
-	});
-	res.status(200).json(orders);
+	const { limit, skip } = getPagination(req.query);
+	const orders = await Order.find(statusFilter(req.query.filter)).sort({ createdAt: -1 }).skip(skip).limit(limit);
+	res.status(200).json(orders.map(summarize));
 });
 
 const getAnOrder = asyncHandler(async (req, res) => {
@@ -74,14 +61,14 @@ const getAnOrder = asyncHandler(async (req, res) => {
 
 	const percent = createPercentage(createdAt, endDate);
 
-	cartItems = await Promise.all(
-		cartItems.map(async (cart) => {
-			let { itemId, count, totalItemsProfit, profitPercent, price } = cart;
-			let data = await Product.findOne({ _id: cart?.itemId }, { name: 1, images: 1 });
-			// The product may have been deleted since the order was placed
-			return { count, totalItemsProfit, profitPercent, price, name: data?.name || "Product no longer available", image: data?.images?.[0], _id: itemId };
-		})
-	);
+	// One query for all products in the order
+	const products = await Product.find({ _id: { $in: cartItems.map((item) => item.itemId) } }, { name: 1, images: 1 });
+	const productsById = new Map(products.map((product) => [product._id.toString(), product]));
+	cartItems = cartItems.map(({ itemId, count, totalItemsProfit, profitPercent, price }) => {
+		const data = productsById.get(itemId?.toString());
+		// The product may have been deleted since the order was placed
+		return { count, totalItemsProfit, profitPercent, price, name: data?.name || "Product no longer available", image: data?.images?.[0], _id: itemId };
+	});
 	let step = percent < 10 ? 1 : percent < 35 ? 2 : percent < 70 ? 3 : percent < 100 ? 4 : 5;
 
 	res.status(200).json({ cart: cartItems, totalPrice, totalProfit, avgProfitPercent, status, step });

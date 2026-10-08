@@ -6,7 +6,7 @@ const subSchema = mongoose.Schema(
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Product",
 		},
-		count: Number,
+		count: { type: Number, required: true, min: 1, max: 99, validate: { validator: Number.isInteger, message: "Count must be a whole number" } },
 	},
 	{ _id: false }
 );
@@ -16,6 +16,8 @@ const cartSchema = mongoose.Schema({
 	user: {
 		type: mongoose.Schema.Types.ObjectId,
 		ref: "User",
+		required: true,
+		unique: true, // One cart per user
 	},
 });
 

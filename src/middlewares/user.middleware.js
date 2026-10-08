@@ -1,37 +1,35 @@
-const asyncHandler = require("express-async-handler");
-const User = require("../schemas/User.schema");
-const Newsletter = require("../schemas/Newsletter.schema");
 const jwt = require("jsonwebtoken");
+const User = require("../schemas/User.schema");
 
-const user = asyncHandler(async (req, res, next) => {
-	// Verifies the JWT and loads the user into req.user for the rest of the request
+// Verifies the JWT and loads the user into req.user for the rest of the request (one database read)
+const user = async (req, res, next) => {
+	const authorization = req.headers?.authorization;
+	if (typeof authorization !== "string" || !authorization.startsWith("Bearer ")) {
+		return res.status(401).json({ error: "Please log in to perform this request" });
+	}
+
+	let payload;
 	try {
-		if (!req?.headers?.authorization || !req.headers.authorization.startsWith("Bearer ")) {
-			res.status(401);
-			throw new Error("Please log in to perform this request");
-		}
-		let token = req?.headers.authorization.split(" ")[1];
-		// Compare auth
-		let valid = await jwt.verify(token, process.env.SECRET);
-		if (!valid.userId || !valid.email) {
-			res.status(401);
-			throw new Error("Please log in to perform this task");
-		}
-		// fetch user
-		const user = await User.findOne({ _id: valid.userId }, { password: 0, code: 0 });
-		if (!user) {
-			res.status(401);
-			throw new Error("Please log in to perform this task");
-		}
-
-		const { email, fullname, activated, _id, balance, is_admin } = user;
-		const subscribed = await Newsletter.findOne({ email: email });
-		req.user = { email, fullname, activated, _id, balance, is_admin, subscribed: subscribed ? true : false };
+		payload = jwt.verify(authorization.slice(7), process.env.SECRET, { algorithms: ["HS256"] });
 	} catch (err) {
-		res.status(403).json({ error: err.message });
-		return;
+		return res.status(401).json({ error: "Please log in to perform this request" });
+	}
+	if (!payload?.userId) {
+		return res.status(401).json({ error: "Please log in to perform this request" });
+	}
+
+	try {
+		const account = await User.findOne({ _id: payload.userId }, { email: 1, fullname: 1, activated: 1, balance: 1, is_admin: 1 });
+		if (!account) {
+			return res.status(401).json({ error: "Please log in to perform this request" });
+		}
+		const { email, fullname, activated, _id, balance, is_admin } = account;
+		req.user = { email, fullname, activated, _id, balance, is_admin };
+	} catch (err) {
+		// A database failure is a server error, not an authentication failure
+		return next(err);
 	}
 	next();
-});
+};
 
 module.exports = user;

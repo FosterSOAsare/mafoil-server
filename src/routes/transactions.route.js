@@ -9,20 +9,20 @@ const Transaction = require("../schemas/Transaction.schema");
 const User = require("../schemas/User.schema");
 const Notification = require("../schemas/Notification.schema");
 const HttpError = require("../utils/http-error");
+const { getPagination } = require("../utils/validate");
+
+const TRANSACTION_STATUSES = ["pending", "completed", "cancelled"];
+// Only known statuses filter the list; anything else (including "all") lists every status
+const statusFilter = (filter) => (TRANSACTION_STATUSES.includes(filter) ? { status: filter } : {});
 
 const formatGhs = (amount) => `GH₵${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const getTxns = asyncHandler(async (req, res) => {
-	let { filter } = req.query;
-
-	filter = filter ? filter : "all";
-
-	let obj = { user: req.user._id };
-	if (filter !== "all") {
-		obj = { ...obj, status: filter };
-	}
-	// await Transaction.updateMany({ status: "complete" }, { $set: { status: "completed" } });
-	let txns = await Transaction.find(obj, { __v: 0, user: 0, updatedAt: 0 }).sort({ createdAt: -1 }).limit(20);
+	const { limit, skip } = getPagination(req.query, { defaultLimit: 20 });
+	const txns = await Transaction.find({ user: req.user._id, ...statusFilter(req.query.filter) }, { __v: 0, user: 0, updatedAt: 0 })
+		.sort({ createdAt: -1 })
+		.skip(skip)
+		.limit(limit);
 	res.status(200).json(txns);
 });
 const getATxn = asyncHandler(async (req, res) => {
@@ -41,16 +41,11 @@ const getATxn = asyncHandler(async (req, res) => {
 	res.status(200).json(txn);
 });
 const getAllTxns = asyncHandler(async (req, res) => {
-	let { filter } = req.query;
-
-	filter = filter ? filter : "all";
-
-	let obj = {};
-	if (filter !== "all") {
-		obj = { ...obj, status: filter };
-	}
-
-	let txns = await Transaction.find(obj, { __v: 0, user: 0, updatedAt: 0 }).sort({ createdAt: -1 });
+	const { limit, skip } = getPagination(req.query);
+	const txns = await Transaction.find(statusFilter(req.query.filter), { __v: 0, user: 0, updatedAt: 0 })
+		.sort({ createdAt: -1 })
+		.skip(skip)
+		.limit(limit);
 	res.status(200).json(txns);
 });
 

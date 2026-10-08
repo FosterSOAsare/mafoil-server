@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const User = require("../../schemas/User.schema");
 const Transaction = require("../../schemas/Transaction.schema");
 const Notification = require("../../schemas/Notification.schema");
+const Newsletter = require("../../schemas/Newsletter.schema");
+const { isNonEmptyString, isValidPassword, PASSWORD_RULE } = require("../../utils/validate");
 const HttpError = require("../../utils/http-error");
 const { roundMoney, isPositiveAmount } = require("../../utils/money");
 
@@ -15,27 +17,32 @@ const MAX_DEPOSIT_USD = 10000;
 const stripe = require("stripe")(process.env.stripe_key);
 
 const controllerGetUser = asyncHandler(async (req, res) => {
-	res.status(200).json(req.user);
+	const subscribed = Boolean(await Newsletter.exists({ email: req.user.email, status: "active" }));
+	res.status(200).json({ ...req.user, subscribed });
 });
 
 const controllerUpdateUserData = asyncHandler(async (req, res) => {
 	let userId = req.user._id;
 	let { fullname } = req.body;
-	if (!fullname) {
+	if (!isNonEmptyString(fullname, 100) || fullname.trim().length < 3) {
 		res.status(400);
-		throw new Error("Please provide all information");
+		throw new Error("Please provide your full name (3 to 100 characters)");
 	}
 	// Update user
-	await User.updateOne({ _id: userId }, { $set: { fullname } });
+	await User.updateOne({ _id: userId }, { $set: { fullname: fullname.trim() } });
 
 	res.status(200).json({ success: true });
 });
 
 const controllerUpdateUserPassword = asyncHandler(async (req, res) => {
 	let { oldpassword, newpassword } = req.body;
-	if (!oldpassword || !newpassword) {
+	if (typeof oldpassword !== "string" || !oldpassword) {
 		res.status(400);
-		throw new Error("Please provide all information");
+		throw new Error("Please provide your current password");
+	}
+	if (!isValidPassword(newpassword)) {
+		res.status(400);
+		throw new Error(PASSWORD_RULE);
 	}
 
 	const user = await User.findOne({ _id: req.user._id });
@@ -55,9 +62,9 @@ const controllerUpdateUserPassword = asyncHandler(async (req, res) => {
 });
 
 const controllerUpdateNewsLetterSubscription = asyncHandler(async (req, res) => {
-	let { subscription } = req.body;
-	if (!subscription) subscription = false;
-	await User.updateOne({ _id: req.user._id }, { newsletter: subscription });
+	// Stored in the Newsletter collection (User has no newsletter field, so the old update did nothing)
+	const subscribed = req.body.subscription === true;
+	await Newsletter.updateOne({ email: req.user.email.toLowerCase() }, { $set: { status: subscribed ? "active" : "inactive" } }, { upsert: true });
 	res.status(200).json({ success: true });
 });
 

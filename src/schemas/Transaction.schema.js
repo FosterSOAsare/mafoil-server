@@ -3,17 +3,19 @@ const mongoose = require("mongoose");
 const transactionSchema = mongoose.Schema(
 	{
 		type: {
-			// Deposit || withdraw
 			type: String,
+			enum: ["deposit", "withdraw"],
 			required: true,
 		},
 		status: {
 			type: String,
+			enum: ["pending", "completed", "cancelled"],
 			default: "pending",
 		},
 		amount: {
 			type: Number,
 			required: true,
+			min: 0,
 		},
 		desc: {
 			type: String,
@@ -36,5 +38,9 @@ const transactionSchema = mongoose.Schema(
 		timestamps: true,
 	}
 );
+
+// The user's transaction history and the admin list
+transactionSchema.index({ user: 1, createdAt: -1 });
+transactionSchema.index({ status: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Transaction", transactionSchema);

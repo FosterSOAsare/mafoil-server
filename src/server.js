@@ -1,4 +1,7 @@
 require("dotenv").config();
+const { validateEnv } = require("./libs/env");
+validateEnv();
+
 const http = require("http");
 
 const app = require("./app");
@@ -11,7 +14,9 @@ const PORT = process.env.PORT || 8000;
 async function start() {
 	// Connect before accepting requests, so no request is served without a database
 	await connectDB();
-	const tasks = runCron();
+	// With several instances, set RUN_CRONS=false on all but one. The jobs are safe to run concurrently
+	// (order payouts are conditional updates), this just avoids duplicate work.
+	const tasks = process.env.RUN_CRONS === "false" ? [] : runCron();
 	server.listen(PORT, () => {
 		console.log(`Server listening on PORT ${PORT}...`);
 	});
