@@ -12,6 +12,8 @@ async function setupTestApp() {
 		STRIPE_KEY: "sk_test_fake",
 		NODE_ENV: "test",
 		CLIENT_URL: "http://client.test",
+		// Rate limits are off by default in tests; tests that check them set this to "false"
+		DISABLE_RATE_LIMITS: "true",
 	});
 
 	const mongoose = require("mongoose");

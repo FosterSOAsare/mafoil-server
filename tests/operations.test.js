@@ -103,8 +103,10 @@ describe("contact form", () => {
 		expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt; costs $5 $&amp;");
 		expect(html).not.toContain("<script>");
 
+		process.env.DISABLE_RATE_LIMITS = "false";
 		const statuses = [];
 		for (let i = 0; i < 6; i++) statuses.push((await t.api().post("/api/contact").send({ title: "T", email: "a@b.com", message: "M" })).status);
+		process.env.DISABLE_RATE_LIMITS = "true";
 		expect(statuses).toContain(429);
 	});
 });

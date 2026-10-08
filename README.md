@@ -148,8 +148,8 @@ server/
 
 ## Authentication
 
-1. **Register** — `POST /api/auth/register` creates an unverified, not-yet-activated user and emails a 6-digit code. Emails are stored lowercase and must be unique; passwords must be 8 characters to 72 bytes.
-2. **Verify email** — `POST /api/auth/verifyEmail` with `mode: "accountverification"` marks the account as verified. Unverified accounts are deleted after 2 hours by a cron job.
+1. **Register** — `POST /api/auth/register` creates an unverified, not-yet-activated user and emails a 6-digit code. Registering an email that already exists gets the same response (an unverified account gets a new code; a verified one gets nothing). Emails are stored lowercase and must be unique; passwords must be 8 characters to 72 bytes.
+2. **Verify email** — `POST /api/auth/verifyEmail` with `mode: "accountverification"` marks the account as verified. Codes are random, single-purpose, expire after **15 minutes** and allow **5 guesses**. Unverified accounts are deleted after 2 hours by a cron job.
 3. **Login** — `POST /api/auth/login` returns the user and a JWT (`token`). A wrong password and an unknown email return the same error. Logging in to an unverified account sends a fresh code and returns `401`.
 4. **Authenticated requests** — send the token as a header:
 
@@ -168,7 +168,11 @@ db.users.updateOne({ email: "admin@example.com" }, { $set: { is_admin: true } })
 
 Reset and resend requests return the same response whether or not an account exists, so they can't be used to discover registered emails.
 
-**Password reset flow:** `POST /auth/resetPassword` emails a code → `POST /auth/verifyEmail` with `mode: "resetpassword"` returns a reset `code` → `POST /auth/confirmReset` with `email`, `code` and `newPassword` sets the new password.
+**Password reset flow:** `POST /auth/resetPassword` emails a code → `POST /auth/verifyEmail` with `mode: "resetpassword"` returns a single-use reset `token` (valid 15 minutes; only its SHA-256 hash is stored) → `POST /auth/confirmReset` with `email`, `token` and `newPassword` sets the new password.
+
+**Sessions:** every JWT carries the user's token version. Changing or resetting the password, or logging out, increments it, which invalidates every existing token for that user. `PUT /user/password` returns a fresh token for the current device.
+
+**Rate limits** (per email for account-specific limits, otherwise per IP): login 10 per 15 minutes per account; register 10 per hour; reset/resend emails 5 per hour per account and 20 per hour per client; code and reset checks 20 per 15 minutes; contact form 5 per hour. Over the limit returns `429`.
 
 ## API reference
 
@@ -182,13 +186,12 @@ Auth column: **—** public, **User** requires a valid JWT, **Admin** requires a
 | ------ | ---------------- | :--: | ------------ |
 | POST   | `/register`      | —    | `{ email, password, fullname, referrer? }` — `referrer` is another user's id. |
 | POST   | `/login`         | —    | `{ email, password }` → user fields + `token`. |
-| POST   | `/verifyEmail`   | —    | `{ email, code, mode }` — `mode` is `accountverification` or `resetpassword`. |
+| POST   | `/verifyEmail`   | —    | `{ email, code, mode }` — `mode` is `accountverification` or `resetpassword`. Reset mode returns `{ token }`. |
 | POST   | `/resendEmail`   | —    | `{ email, mode }` |
 | POST   | `/resetPassword` | —    | `{ email }` — sends a reset code. |
-| POST   | `/confirmReset`  | —    | `{ email, code, newPassword }` |
-| POST   | `/changePassword`| —    | `{ email, password, newPassword }` |
+| POST   | `/confirmReset`  | —    | `{ email, token, newPassword }` |
 | GET    | `/user`          | User | Current user. |
-| POST   | `/logout`        | —    | Confirms logout. Auth is a stateless JWT, so the client discards the token. |
+| POST   | `/logout`        | —    | Revokes the sent token (and the user's other sessions) by bumping the token version. |
 
 ### User & wallet — `/api/user`
 
@@ -196,7 +199,7 @@ Auth column: **—** public, **User** requires a valid JWT, **Admin** requires a
 | ------ | -------------------- | :--: | ------------ |
 | GET    | `/`                  | User | Current user (`email, fullname, activated, _id, balance, is_admin, subscribed`). |
 | PUT    | `/details`           | User | `{ fullname }` |
-| PUT    | `/password`          | User | `{ oldpassword, newpassword }` |
+| PUT    | `/password`          | User | `{ oldpassword, newpassword }` → `{ success, token }`. Logs out other sessions. |
 | DELETE | `/`                  | User | `{ password }` — deletes the account and the user's cart, wishlist, notifications and newsletter entry; reviews are anonymised and transactions kept without the payout address. Refused (409) while the balance is above 0 or an order or withdrawal is pending. |
 | PUT    | `/newsletter`        | User | `{ subscription: boolean }` — subscribes or unsubscribes the user's own email. |
 | POST   | `/activate`          | User | Activates the account for a GH₵40 fee; credits the referrer GH₵3. |

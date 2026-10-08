@@ -9,6 +9,7 @@ const WishList = require("../../schemas/Wishlist.schema");
 const Review = require("../../schemas/Reviews.schema");
 const Order = require("../../schemas/Order.schema");
 const { isNonEmptyString, isValidPassword, PASSWORD_RULE } = require("../../utils/validate");
+const { signToken } = require("../../libs/auth-token");
 const HttpError = require("../../utils/http-error");
 const { roundMoney, isPositiveAmount } = require("../../utils/money");
 
@@ -58,11 +59,11 @@ const controllerUpdateUserPassword = asyncHandler(async (req, res) => {
 		throw new Error("The provided password is incorrect");
 	}
 
-	// Update user's password
+	// Update user's password. This logs out every existing session, so send this device a fresh token
 	await user.updatePassword(newpassword);
 	await user.save();
 
-	res.status(200).json({ success: true });
+	res.status(200).json({ success: true, token: signToken(user) });
 });
 
 const controllerUpdateNewsLetterSubscription = asyncHandler(async (req, res) => {

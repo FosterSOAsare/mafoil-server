@@ -1,8 +1,10 @@
+const crypto = require("crypto");
+
+// Cryptographically random numeric code (Math.random is predictable)
 function generateCode(length = 6) {
-	let alp = "1234567890";
 	let code = "";
-	for (let i = 0; i < 6; i++) {
-		code += alp[Math.floor(Math.random() * alp.length)];
+	for (let i = 0; i < length; i++) {
+		code += crypto.randomInt(0, 10);
 	}
 	return code;
 }

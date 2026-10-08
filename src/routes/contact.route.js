@@ -1,21 +1,12 @@
 const express = require("express");
 const asyncHandler = require("express-async-handler");
-const { rateLimit } = require("express-rate-limit");
 
 const user = require("../middlewares/user.middleware");
 const { sendContactEmail } = require("../libs/nodemailer");
+const { contactLimiter } = require("../middlewares/rate-limit.middleware");
 const contactRouter = express.Router();
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// The form needs no login, so limit how often one client can send messages to the support inbox
-const contactLimiter = rateLimit({
-	windowMs: 60 * 60 * 1000, // 1 hour
-	limit: 5,
-	standardHeaders: "draft-7",
-	legacyHeaders: false,
-	message: { error: "Too many messages sent. Please try again later." },
-});
 
 const getAllContacts = asyncHandler(async (req, res) => {
 	res.status(200).json({ success: true });
