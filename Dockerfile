@@ -1,24 +1,20 @@
-# Use a smaller image for the runtime
 FROM node:24-slim
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy only the built application files from the local dist folder to the container
-COPY /dist /app/dist
-
-# Copy package.json and package-lock.json (or yarn.lock) to the working directory
+# Install production dependencies first so this layer is cached between code changes
 COPY package*.json ./
-COPY /.env /app/.env
+RUN npm ci --omit=dev
 
-# Install only production dependencies
-RUN npm install --only=production
+# Copy the application source (see .dockerignore for what is excluded)
+COPY src ./src
 
-# Set environment variable for the Node.js application
 ENV NODE_ENV=production
 
-# Command to run the application
-CMD npm run serve
+# Run as the unprivileged user that ships with the Node image
+USER node
 
-# Expose the port your application runs on
 EXPOSE 8000
+
+# Environment variables (MONGO_URL, SECRET, ...) are provided at runtime, e.g. `docker run --env-file .env`
+CMD ["node", "src/server.js"]

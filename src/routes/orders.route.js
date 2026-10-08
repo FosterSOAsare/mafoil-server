@@ -58,8 +58,18 @@ const getAllOrders = asyncHandler(async (req, res) => {
 
 const getAnOrder = asyncHandler(async (req, res) => {
 	const { orderId } = req.params;
+	if (!mongoose.isValidObjectId(orderId)) {
+		res.status(404);
+		throw new Error("Order was not found");
+	}
 
-	let order = await Order.findOne({ _id: orderId }).sort({ createdAt: 1 });
+	// Users can only see their own orders; admins can see any order
+	const filter = req.session.user.is_admin ? { _id: orderId } : { _id: orderId, user: req.session.user._id };
+	let order = await Order.findOne(filter);
+	if (!order) {
+		res.status(404);
+		throw new Error("Order was not found");
+	}
 	let { totalPrice, totalProfit, avgProfitPercent, status, cart: cartItems, createdAt, endDate } = order;
 
 	const percent = createPercentage(createdAt, endDate);
@@ -68,8 +78,8 @@ const getAnOrder = asyncHandler(async (req, res) => {
 		cartItems.map(async (cart) => {
 			let { itemId, count, totalItemsProfit, profitPercent, price } = cart;
 			let data = await Product.findOne({ _id: cart?.itemId }, { name: 1, images: 1 });
-			let { name, images } = data;
-			return { count, totalItemsProfit, profitPercent, price, name, image: images[0], _id: itemId };
+			// The product may have been deleted since the order was placed
+			return { count, totalItemsProfit, profitPercent, price, name: data?.name || "Product no longer available", image: data?.images?.[0], _id: itemId };
 		})
 	);
 	let step = percent < 10 ? 1 : percent < 35 ? 2 : percent < 70 ? 3 : percent < 100 ? 4 : 5;

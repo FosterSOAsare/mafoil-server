@@ -1,6 +1,5 @@
 require("dotenv").config();
 const cloudinary = require("cloudinary");
-const path = require("path");
 const DataUri = require("datauri/parser");
 
 const parser = new DataUri();
@@ -12,14 +11,14 @@ cloudinary.v2.config({
 	secure: true,
 });
 
-async function getSecuredUrl(file) {
-	const extName = path.extname(file.originalname).toString();
-	let format = extName.replace(".", "");
-	const file64 = parser.format(extName, file.buffer);
+async function getSecuredUrl(file, folder = "mafoil") {
+	// Derive the format from the validated mime type, not the client-supplied file name
+	const format = file.mimetype.split("/")[1].replace("jpeg", "jpg");
+	const file64 = parser.format(`.${format}`, file.buffer);
 
 	let res = {};
 
-	res = await cloudinary.v2.uploader.upload(file64.content, { folder: "mafoil", format, use_filename: true });
+	res = await cloudinary.v2.uploader.upload(file64.content, { folder, format, use_filename: true });
 
 	return { public_id: res.public_id, url: res.secure_url };
 }

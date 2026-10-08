@@ -1,6 +1,7 @@
 const express = require("express");
 const user = require("../middlewares/user.middleware");
 const asyncHandler = require("express-async-handler");
+const mongoose = require("mongoose");
 const Notification = require("../schemas/Notification.schema");
 
 const notificationsRouter = express.Router();
@@ -17,14 +18,22 @@ const controllerGetNotifications = asyncHandler(async (req, res) => {
 
 const controllerMarkNotificationAsRead = asyncHandler(async (req, res) => {
 	const { notificationId } = req.params;
-	const notification = await Notification.findOne({ _id: notificationId });
+	if (!mongoose.isValidObjectId(notificationId)) {
+		res.status(404);
+		throw new Error("Notification does not exist");
+	}
 
+	// Scoped to the logged-in user, so other users' notifications can't be read or changed
+	const notification = await Notification.findOneAndUpdate(
+		{ _id: notificationId, user: req.session.user._id },
+		{ $set: { status: "read" } },
+		{ new: true, projection: { __v: 0, updatedAt: 0, createdAt: 0, user: 0 } }
+	);
 	if (!notification) {
 		res.status(404);
 		throw new Error("Notification does not exist");
 	}
 
-	await Notification.updateOne({ _id: notificationId }, { $set: { status: "read" } });
 	res.status(200).json(notification);
 });
 notificationsRouter.get("/", user, controllerGetNotifications);

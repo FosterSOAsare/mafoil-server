@@ -1,9 +1,12 @@
 const express = require("express");
 const user = require("../middlewares/user.middleware");
+const admin = require("../middlewares/admin.middleware");
 const asyncHandler = require("express-async-handler");
 const Newsletter = require("../schemas/Newsletter.schema");
 
 const newsletterRouter = express.Router();
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const controllerGetNewsletters = asyncHandler(async (req, res) => {
 	const newsletter = await Newsletter.find({}, { __v: 0, updatedAt: 0, createdAt: 0 }).sort({ createdAt: -1 });
@@ -11,23 +14,24 @@ const controllerGetNewsletters = asyncHandler(async (req, res) => {
 });
 
 const controllerModerateNewsletterSubscription = asyncHandler(async (req, res) => {
-	const { email, moderation } = req.body;
+	const { moderation } = req.body;
+	const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
 
-	if (!email) {
+	if (!EMAIL_PATTERN.test(email) || email.length > 254) {
 		res.status(400);
-		throw new Error("Please provide an email address");
+		throw new Error("Please provide a valid email address");
 	}
-	const newsletter = await Newsletter.findOne({ email });
+	const unsubscribe = moderation === "unsub";
+	if (unsubscribe && email !== req.session.user.email.toLowerCase()) {
+		res.status(403);
+		throw new Error("You can only unsubscribe your own email address");
+	}
 
-	if (!newsletter) {
-		await Newsletter.create({ email, status: "active" });
-	} else {
-		await Newsletter.updateOne({ email }, { $set: { status: moderation === "unsub" ? "inactive" : "active" } });
-	}
+	await Newsletter.updateOne({ email }, { $set: { status: unsubscribe ? "inactive" : "active" } }, { upsert: true });
 
 	res.status(200).json({ success: true });
 });
-newsletterRouter.get("/all", user, controllerGetNewsletters);
+newsletterRouter.get("/all", user, admin, controllerGetNewsletters);
 newsletterRouter.post("/", user, controllerModerateNewsletterSubscription);
 
 module.exports = newsletterRouter;
