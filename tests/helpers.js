@@ -9,7 +9,7 @@ async function setupTestApp() {
 	Object.assign(process.env, {
 		MONGO_URL: replSet.getUri("mafoil-test"),
 		SECRET: "test-secret-that-is-at-least-32-characters",
-		stripe_key: "sk_test_fake",
+		STRIPE_KEY: "sk_test_fake",
 		NODE_ENV: "test",
 		CLIENT_URL: "http://client.test",
 	});

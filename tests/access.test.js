@@ -48,7 +48,7 @@ test("notifications can only be read and marked by their owner", async () => {
 test("newsletter: admin-only list, own-email unsubscribe, validated email", async () => {
 	const Newsletter = t.mongoose.model("Newsletter");
 	await Newsletter.create({ email: "victim@example.com" });
-	expect((await bob.as(t.api().get("/api/newsletters/all"))).status).toBe(401);
+	expect((await bob.as(t.api().get("/api/newsletters/all"))).status).toBe(403);
 	expect((await admin.as(t.api().get("/api/newsletters/all"))).status).toBe(200);
 	expect((await bob.as(t.api().post("/api/newsletters")).send({ email: "victim@example.com", moderation: "unsub" })).status).toBe(403);
 	expect((await bob.as(t.api().post("/api/newsletters")).send({ email: { $ne: null }, moderation: "unsub" })).status).toBe(400);
@@ -71,7 +71,7 @@ describe("file uploads", () => {
 
 	test("only admins can upload images, with type and size limits", async () => {
 		expect((await t.api().post("/api/files").attach("file", png, { filename: "a.png", contentType: "image/png" })).status).toBe(401);
-		expect((await bob.as(t.api().post("/api/files")).attach("file", png, { filename: "a.png", contentType: "image/png" })).status).toBe(401);
+		expect((await bob.as(t.api().post("/api/files")).attach("file", png, { filename: "a.png", contentType: "image/png" })).status).toBe(403);
 		expect((await admin.as(t.api().post("/api/files")).attach("file", Buffer.from("<html>"), { filename: "x.html", contentType: "text/html" })).status).toBe(400);
 		expect((await admin.as(t.api().post("/api/files")).attach("file", Buffer.alloc(6 * 1024 * 1024), { filename: "big.png", contentType: "image/png" })).status).toBe(400);
 		expect((await admin.as(t.api().post("/api/files"))).status).toBe(400);
@@ -83,7 +83,7 @@ describe("file uploads", () => {
 	});
 
 	test("only admins can delete, and only inside mafoil/", async () => {
-		expect((await bob.as(t.api().delete("/api/files?public_id=mafoil/abc"))).status).toBe(401);
+		expect((await bob.as(t.api().delete("/api/files?public_id=mafoil/abc"))).status).toBe(403);
 		expect((await admin.as(t.api().delete("/api/files?public_id=other/logo"))).status).toBe(403);
 		expect((await admin.as(t.api().delete("/api/files?public_id=mafoil/abc"))).status).toBe(200);
 		expect(cloudinary.calls).toContainEqual(["destroy", "mafoil/abc"]);

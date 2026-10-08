@@ -60,7 +60,7 @@ const moderateProductReview = asyncHandler(async (req, res) => {
 							"rating.totalRatings": { $add: [{ $ifNull: ["$rating.totalRatings", 0] }, 1] },
 						},
 					},
-					{ $set: { "rating.avgRating": { $round: [{ $divide: ["$rating.accumulatedRating", "$rating.totalRatings"] }, 0] } } },
+					{ $set: { "rating.avgRating": { $round: [{ $divide: ["$rating.accumulatedRating", "$rating.totalRatings"] }, 1] } } },
 				],
 				{ session }
 			);

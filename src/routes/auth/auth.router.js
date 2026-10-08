@@ -1,6 +1,5 @@
 const express = require("express");
 const {
-	verifyAuth,
 	controllerAuthLocalLogin,
 	controllerAuthLocalRegister,
 	controllerResetPassword,
@@ -10,16 +9,10 @@ const {
 	controllerLogoutUser,
 	controllerVerifyEmail,
 	controllerResendEmail,
-	controllerUpdateUserData,
-	controllerUpdateUserPassword,
-	controllerUpdateNewsLetterSubscription,
-	controllerDeleteAccount,
 } = require("./auth.controller");
 const user = require("../../middlewares/user.middleware");
 
 const authRouter = express.Router();
-
-// authRouter.get("/verify", user, verifyAuth);
 
 authRouter.post("/login", controllerAuthLocalLogin);
 authRouter.post("/register", controllerAuthLocalRegister);
@@ -31,11 +24,7 @@ authRouter.post("/resendEmail", controllerResendEmail);
 
 authRouter.get("/user", user, controllerGetUser);
 
-authRouter.get("/logout", user, controllerLogoutUser);
+// POST so it can't be triggered by a link or image; auth is a stateless JWT, so no login is needed to log out
+authRouter.post("/logout", controllerLogoutUser);
 
-// authRouter.put("/userDetails", user, controllerUpdateUserData);
-// authRouter.put("/userPassword", user, controllerUpdateUserPassword);
-
-// authRouter.delete("/user", user, controllerDeleteAccount);
-// authRouter.put("/user/newsletter", user, controllerUpdateNewsLetterSubscription);
 module.exports = authRouter;

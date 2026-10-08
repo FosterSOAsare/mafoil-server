@@ -32,8 +32,10 @@ const getATxn = asyncHandler(async (req, res) => {
 		throw new Error("The transaction does not exist");
 	}
 
-	// Admin view: include who made the transaction
-	let txn = await Transaction.findOne({ _id: id }, { __v: 0, updatedAt: 0 }).populate({ path: "user", model: User, select: "email fullname" });
+	// Admins see any transaction with its owner's name and email; users only see their own
+	const txn = req.user.is_admin
+		? await Transaction.findOne({ _id: id }, { __v: 0, updatedAt: 0 }).populate({ path: "user", model: User, select: "email fullname" })
+		: await Transaction.findOne({ _id: id, user: req.user._id }, { __v: 0, updatedAt: 0, user: 0 });
 	if (!txn) {
 		res.status(404);
 		throw new Error("The transaction does not exist");
@@ -42,7 +44,8 @@ const getATxn = asyncHandler(async (req, res) => {
 });
 const getAllTxns = asyncHandler(async (req, res) => {
 	const { limit, skip } = getPagination(req.query);
-	const txns = await Transaction.find(statusFilter(req.query.filter), { __v: 0, user: 0, updatedAt: 0 })
+	const txns = await Transaction.find(statusFilter(req.query.filter), { __v: 0, updatedAt: 0 })
+		.populate({ path: "user", model: User, select: "email fullname" })
 		.sort({ createdAt: -1 })
 		.skip(skip)
 		.limit(limit);
@@ -95,7 +98,7 @@ const decideWithdrawal = (decision) =>
 
 transactionsRouter.get("/", user, getTxns);
 transactionsRouter.get("/admin", user, admin, getAllTxns);
-transactionsRouter.get("/:id", user, admin, getATxn);
+transactionsRouter.get("/:id", user, getATxn);
 transactionsRouter.put("/:id/approve", user, admin, decideWithdrawal("approve"));
 transactionsRouter.put("/:id/reject", user, admin, decideWithdrawal("reject"));
 

@@ -113,7 +113,7 @@ const checkoutCart = asyncHandler(async (req, res) => {
 });
 
 cartRouter.get("/", user, getUserCart);
-cartRouter.get("/checkout", user, checkoutCart);
+cartRouter.post("/checkout", user, checkoutCart);
 cartRouter.post("/", user, insertUserCart);
 
 module.exports = cartRouter;

@@ -84,10 +84,6 @@ const controllerAuthLocalRegister = asyncHandler(async (req, res) => {
 	res.status(200).json({ email, _id });
 });
 
-const verifyAuth = asyncHandler(async (req, res) => {
-	res.status(200).json(req.user);
-});
-
 const controllerResetPassword = asyncHandler(async (req, res) => {
 	let { email } = req.body;
 	if (!isValidEmail(email)) {
@@ -217,59 +213,7 @@ const controllerLogoutUser = asyncHandler(async (req, res) => {
 	res.status(200).json({ success: true });
 });
 
-const controllerUpdateUserData = asyncHandler(async (req, res) => {
-	let userId = req.user._id;
-	let { firstname, lastname } = req.body;
-	if (!firstname || !lastname) {
-		res.status(400);
-		throw new Error("Please provide all information");
-	}
-	// Update user
-	await User.updateOne({ _id: userId }, { $set: { firstname, lastname } });
-
-	// Update session
-	req.user = { ...req.user, firstname, lastname };
-	res.status(200).json({ success: true });
-});
-
-const controllerUpdateUserPassword = asyncHandler(async (req, res) => {
-	let userId = req.user._id;
-	let { password, newPassword } = req.body;
-	if (!password || !newPassword) {
-		res.status(400);
-		throw new Error("Please provide all information");
-	}
-
-	const user = await User.findOne({ _id: req.user._id });
-
-	// Check password
-	let valid = await user.comparePassword(password);
-	if (!valid) {
-		res.status(400);
-		throw new Error("The provided password is incorrect");
-	}
-
-	// Update user's password
-	await user.updatePassword(newPassword);
-	await user.save();
-
-	res.status(200).json({ success: true });
-});
-
-const controllerUpdateNewsLetterSubscription = asyncHandler(async (req, res) => {
-	let { subscription } = req.body;
-	if (!subscription) subscription = false;
-	await User.updateOne({ _id: req.user._id }, { newsletter: subscription });
-	res.status(200).json({ success: true });
-});
-
-const controllerDeleteAccount = asyncHandler(async (req, res) => {
-	// await User.deleteOne({ _id: req.user._id });
-	res.status(200).json({ success: true });
-});
-
 module.exports = {
-	verifyAuth,
 	controllerAuthLocalRegister,
 	controllerAuthLocalLogin,
 	controllerResetPassword,
@@ -279,7 +223,4 @@ module.exports = {
 	controllerLogoutUser,
 	controllerVerifyEmail,
 	controllerResendEmail,
-	controllerUpdateUserData,
-	controllerUpdateUserPassword,
-	controllerDeleteAccount,
 };

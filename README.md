@@ -38,7 +38,7 @@ The companion frontend lives in a separate repository: [FosterSOAsare/mafoil-cli
 | Email              | `nodemailer` over SMTP (port 465, TLS)                    |
 | Scheduled jobs     | `node-cron` 4                                             |
 | Security           | `helmet`, `express-rate-limit`, input sanitising middleware |
-| Logging            | `morgan` (combined format)                                |
+| Logging            | `morgan` (one JSON object per request in production, short lines in development) |
 | Tests              | Jest 30 + Supertest + `mongodb-memory-server`             |
 
 ## Requirements
@@ -79,19 +79,20 @@ Create `server/.env` (it is git-ignored). Variables actually read by the code:
 | `MONGO_URL`             | ✅ | MongoDB connection string. |
 | `SECRET`                | ✅ | Secret used to sign and verify JWTs. Use a long random string (32+ characters). |
 | `CLIENT_URL`            | ✅ | Public URL of the frontend, e.g. `http://localhost:3000`. Used for Stripe success/cancel redirects. |
-| `stripe_key`            | ✅ | Stripe **secret** key (`sk_test_…` / `sk_live_…`). |
-| `cloudinary_cloud_name` | ✅ | Cloudinary cloud name. |
-| `cloudinary_api_key`    | ✅ | Cloudinary API key. |
-| `cloudinary_api_secret` | ✅ | Cloudinary API secret. |
+| `STRIPE_KEY`            | ✅ | Stripe **secret** key (`sk_test_…` / `sk_live_…`). |
+| `CLOUDINARY_CLOUD_NAME` | ✅ | Cloudinary cloud name. |
+| `CLOUDINARY_API_KEY`    | ✅ | Cloudinary API key. |
+| `CLOUDINARY_API_SECRET` | ✅ | Cloudinary API secret. |
 | `SMTP_HOST`             | ✅ | SMTP server host (connection uses port 465 with TLS). |
 | `EMAIL_ADDRESS`         | ✅ | SMTP username, also used as the `From` address. |
 | `EMAIL_PASSWORD`        | ✅ | SMTP password / app password. |
 | `SUPPORT_EMAIL`         | ✅ | Inbox that receives messages from the contact form. |
+| `CORS_ORIGINS`          |    | Comma-separated origins allowed to call the API. Defaults to `https://mafoil.vercel.app` in production and any origin otherwise. |
 | `PORT`                  |    | Port to listen on. Defaults to `8000`. |
 | `NODE_ENV`              |    | Set to `production` to enable the production CORS allow-list. |
 | `RUN_CRONS`             |    | Set to `false` to stop this instance running the scheduled jobs (useful when running more than one instance). Defaults to running them. |
 
-`.env.example` contains every variable with a short comment.
+`.env.example` contains every variable with a short comment. The old lowercase names (`stripe_key`, `cloudinary_cloud_name`, `cloudinary_api_key`, `cloudinary_api_secret`) still work, with a startup warning asking you to rename them.
 
 Generate a strong secret with:
 
@@ -171,7 +172,7 @@ Reset and resend requests return the same response whether or not an account exi
 
 ## API reference
 
-All routes are prefixed with `/api`. Errors are returned as `{ "error": "message" }` with an appropriate status code: 400 for invalid input, 401/403 for auth, 404 not found, 409 conflicts (already done or duplicate), 429 rate limited. Unexpected 500 errors return a generic message. List endpoints accept `?page=` and `?limit=` (max 100).
+All routes are prefixed with `/api`. Errors are returned as `{ "error": "message" }` with an appropriate status code: 400 for invalid input, 401 when not logged in, 403 when logged in without permission (e.g. not an admin), 404 not found, 409 conflicts (already done or duplicate), 429 rate limited. Unexpected 500 errors return a generic message. List endpoints accept `?page=` and `?limit=` (max 100).
 
 Auth column: **—** public, **User** requires a valid JWT, **Admin** requires a JWT for an admin user.
 
@@ -187,7 +188,7 @@ Auth column: **—** public, **User** requires a valid JWT, **Admin** requires a
 | POST   | `/confirmReset`  | —    | `{ email, code, newPassword }` |
 | POST   | `/changePassword`| —    | `{ email, password, newPassword }` |
 | GET    | `/user`          | User | Current user. |
-| GET    | `/logout`        | User | Confirms logout. Auth is a stateless JWT, so the client discards the token. |
+| POST   | `/logout`        | —    | Confirms logout. Auth is a stateless JWT, so the client discards the token. |
 
 ### User & wallet — `/api/user`
 
@@ -196,9 +197,9 @@ Auth column: **—** public, **User** requires a valid JWT, **Admin** requires a
 | GET    | `/`                  | User | Current user (`email, fullname, activated, _id, balance, is_admin, subscribed`). |
 | PUT    | `/details`           | User | `{ fullname }` |
 | PUT    | `/password`          | User | `{ oldpassword, newpassword }` |
-| DELETE | `/`                  | User | Deletes the account. |
+| DELETE | `/`                  | User | `{ password }` — deletes the account and the user's cart, wishlist, notifications and newsletter entry; reviews are anonymised and transactions kept without the payout address. Refused (409) while the balance is above 0 or an order or withdrawal is pending. |
 | PUT    | `/newsletter`        | User | `{ subscription: boolean }` — subscribes or unsubscribes the user's own email. |
-| GET    | `/activate`          | User | Activates the account for a GH₵40 fee; credits the referrer GH₵3. |
+| POST   | `/activate`          | User | Activates the account for a GH₵40 fee; credits the referrer GH₵3. |
 | POST   | `/withdraw`          | User | `{ amount: number, address }` — holds the amount and creates a **pending** withdrawal for an admin to approve or reject. |
 | POST   | `/deposit-checkout`  | User | `{ amount }` in USD ($1–$10,000, whole cents) → `{ url }` of a Stripe Checkout session tied to the user. |
 | PUT    | `/validate-checkout` | User | `{ sessionId }` — credits the wallet once Stripe reports the session as paid. Each session is credited once, and only to the user who created it. |
@@ -233,7 +234,7 @@ Auth column: **—** public, **User** requires a valid JWT, **Admin** requires a
 | ------ | ----------- | :--: | ----- |
 | GET    | `/`         | User | Cart with populated products and counts. |
 | POST   | `/`         | User | `{ cart: [{ id, count }, …] }` — replaces the stored cart. |
-| GET    | `/checkout` | User | Pays for the cart from the wallet and creates an order. Requires an activated account. |
+| POST   | `/checkout` | User | Pays for the cart from the wallet and creates an order. Requires an activated account. |
 
 ### Orders — `/api/orders`
 
@@ -249,8 +250,8 @@ Auth column: **—** public, **User** requires a valid JWT, **Admin** requires a
 | Method | Path     | Auth  | Notes |
 | ------ | -------- | :---: | ----- |
 | GET    | `/`      | User  | Latest 20 of the user's transactions. Query: `filter` (status). |
-| GET    | `/admin` | Admin | All transactions. |
-| GET    | `/:id`   | Admin | Single transaction, including the user's name and email. |
+| GET    | `/admin` | Admin | All transactions, with each owner's name and email. |
+| GET    | `/:id`   | User  | A single transaction. Users can view their own; admins can view any, including the owner's name and email. |
 | PUT    | `/:id/approve` | Admin | Approves a pending withdrawal (marks it completed). |
 | PUT    | `/:id/reject`  | Admin | Rejects a pending withdrawal and refunds the held amount. |
 
@@ -334,7 +335,7 @@ docker run --env-file .env -p 8000:8000 mafoil-server
 
 ### CORS
 
-In production (`NODE_ENV=production`) only `https://mafoil.vercel.app` and `https://crons-gd5m.onrender.com` are allowed origins. In development every origin is allowed. Update the list in [`src/app.js`](src/app.js) when the frontend URL changes.
+Set `CORS_ORIGINS` to a comma-separated list of allowed origins, e.g. `https://mafoil.vercel.app,https://staging.mafoil.example`. Without it, production (`NODE_ENV=production`) allows only `https://mafoil.vercel.app` and development allows every origin.
 
 ## Troubleshooting
 
@@ -346,4 +347,4 @@ In production (`NODE_ENV=production`) only `https://mafoil.vercel.app` and `http
 | Server exits with `Missing required environment variables` | Set `MONGO_URL` and `SECRET` (see `.env.example`). |
 | A unique index fails to build on startup (`E11000` in the logs) | Existing documents have duplicate values (e.g. two users with the same email). Remove the duplicates, then restart. |
 | Verification emails are not sent | Check the SMTP variables; the transport uses port 465 with TLS. |
-| Deposits never reach the wallet | Check `stripe_key` and `CLIENT_URL`; the wallet is only credited after the client calls `/user/validate-checkout`. |
+| Deposits never reach the wallet | Check `STRIPE_KEY` and `CLIENT_URL`; the wallet is only credited after the client calls `/user/validate-checkout`. |

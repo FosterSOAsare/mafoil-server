@@ -4,6 +4,10 @@ const User = require("../../schemas/User.schema");
 const Transaction = require("../../schemas/Transaction.schema");
 const Notification = require("../../schemas/Notification.schema");
 const Newsletter = require("../../schemas/Newsletter.schema");
+const Cart = require("../../schemas/Cart.schema");
+const WishList = require("../../schemas/Wishlist.schema");
+const Review = require("../../schemas/Reviews.schema");
+const Order = require("../../schemas/Order.schema");
 const { isNonEmptyString, isValidPassword, PASSWORD_RULE } = require("../../utils/validate");
 const HttpError = require("../../utils/http-error");
 const { roundMoney, isPositiveAmount } = require("../../utils/money");
@@ -14,7 +18,7 @@ const USD_TO_GHS = 12.78;
 const MIN_DEPOSIT_USD = 1;
 const MAX_DEPOSIT_USD = 10000;
 
-const stripe = require("stripe")(process.env.stripe_key);
+const stripe = require("stripe")(process.env.STRIPE_KEY || process.env.stripe_key);
 
 const controllerGetUser = asyncHandler(async (req, res) => {
 	const subscribed = Boolean(await Newsletter.exists({ email: req.user.email, status: "active" }));
@@ -69,7 +73,40 @@ const controllerUpdateNewsLetterSubscription = asyncHandler(async (req, res) => 
 });
 
 const controllerDeleteAccount = asyncHandler(async (req, res) => {
-	await User.deleteOne({ _id: req.user._id });
+	const userId = req.user._id;
+	const { password } = req.body;
+	if (typeof password !== "string" || !password) {
+		res.status(400);
+		throw new Error("Please enter your password to delete your account");
+	}
+	const account = await User.findOne({ _id: userId });
+	if (!(await account.comparePassword(password))) {
+		res.status(400);
+		throw new Error("The provided password is incorrect");
+	}
+
+	// Don't let money disappear with the account
+	if (account.balance > 0) {
+		res.status(409);
+		throw new Error("Please withdraw your remaining balance before deleting your account");
+	}
+	if ((await Order.exists({ user: userId, status: "pending" })) || (await Transaction.exists({ user: userId, status: "pending" }))) {
+		res.status(409);
+		throw new Error("Please wait for your pending orders and withdrawals to finish before deleting your account");
+	}
+
+	await mongoose.connection.transaction(async (session) => {
+		await User.deleteOne({ _id: userId }, { session });
+		await Cart.deleteOne({ user: userId }, { session });
+		await WishList.deleteOne({ user: userId }, { session });
+		await Notification.deleteMany({ user: userId }, { session });
+		await Newsletter.deleteOne({ email: account.email }, { session });
+		// Orders and transactions stay for the accounting records, without personal details
+		await Transaction.updateMany({ user: userId }, { $unset: { address: "" } }, { session });
+		// Published reviews stay on the product, anonymised
+		await Review.updateMany({ user: userId }, { $set: { name: "Deleted user", email: "deleted@mafo.il" } }, { session });
+	});
+
 	res.status(200).json({ success: true });
 });
 

@@ -80,8 +80,8 @@ describe("admin product management", () => {
 		for (const body of [validProduct({ price: -1 }), validProduct({ price: "49" }), validProduct({ category: "Shirt" }), validProduct({ images: [] }), validProduct({ images: [{ url: "https://evil.com/a.png", public_id: "x" }] })]) {
 			expect((await admin.as(t.api().post("/api/products")).send(body)).status).toBe(400);
 		}
-		expect((await shopper.as(t.api().post("/api/products")).send(validProduct())).status).toBe(401);
-		expect((await shopper.as(t.api().get("/api/products/edit/item-1"))).status).toBe(401);
+		expect((await shopper.as(t.api().post("/api/products")).send(validProduct())).status).toBe(403);
+		expect((await shopper.as(t.api().get("/api/products/edit/item-1"))).status).toBe(403);
 	});
 
 	test("creates URL-safe slugs and rejects duplicates", async () => {
@@ -95,7 +95,7 @@ describe("admin product management", () => {
 	test("delete removes the product, its images and cart/wishlist entries", async () => {
 		const product = await Product.create({ name: "To Delete", price: 5, short_desc: "Bye", slugname: "to-delete", category: "bag", images: [{ url: "https://res.cloudinary.com/x.png", public_id: "mafoil/to-delete" }] });
 		await t.mongoose.model("WishList").create({ user: shopper.user._id, wishlist: [product._id] });
-		expect((await shopper.as(t.api().delete(`/api/products/${product._id}`))).status).toBe(401);
+		expect((await shopper.as(t.api().delete(`/api/products/${product._id}`))).status).toBe(403);
 		expect((await admin.as(t.api().delete(`/api/products/${product._id}`))).status).toBe(200);
 		expect(await Product.exists({ _id: product._id })).toBeNull();
 		expect(cloudinary.calls).toContainEqual(["destroy", "mafoil/to-delete"]);

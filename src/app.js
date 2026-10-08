@@ -16,12 +16,28 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(express.json({ limit: "100kb" }));
 app.use(sanitize);
 
-app.use(
-	cors({
-		origin: process.env?.NODE_ENV === "production" ? ["https://mafoil.vercel.app", "https://crons-gd5m.onrender.com"] : "*",
-	})
-);
-app.use(morgan("combined", { skip: () => process.env.NODE_ENV === "test" }));
+// CORS_ORIGINS is a comma-separated list of allowed origins. Without it, production allows the deployed client
+// and development allows every origin.
+const DEFAULT_PRODUCTION_ORIGINS = ["https://mafoil.vercel.app"];
+const corsOrigins = process.env.CORS_ORIGINS
+	? process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean)
+	: process.env.NODE_ENV === "production"
+	? DEFAULT_PRODUCTION_ORIGINS
+	: "*";
+app.use(cors({ origin: corsOrigins }));
+
+// One JSON object per request in production (easy to search in log tools), readable lines in development
+const jsonLogFormat = (tokens, req, res) =>
+	JSON.stringify({
+		time: tokens.date(req, res, "iso"),
+		method: tokens.method(req, res),
+		url: tokens.url(req, res),
+		status: Number(tokens.status(req, res)) || null,
+		durationMs: Number(tokens["response-time"](req, res)) || null,
+		ip: req.ip,
+		userAgent: tokens["user-agent"](req, res),
+	});
+app.use(morgan(process.env.NODE_ENV === "production" ? jsonLogFormat : "dev", { skip: () => process.env.NODE_ENV === "test" }));
 app.use("/api", appRouter);
 
 app.get("/", (req, res) => {

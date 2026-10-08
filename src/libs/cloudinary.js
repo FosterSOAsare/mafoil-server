@@ -5,9 +5,9 @@ const DataUri = require("datauri/parser");
 const parser = new DataUri();
 
 cloudinary.v2.config({
-	cloud_name: process.env.cloudinary_cloud_name,
-	api_key: process.env.cloudinary_api_key,
-	api_secret: process.env.cloudinary_api_secret,
+	cloud_name: process.env.CLOUDINARY_CLOUD_NAME || process.env.cloudinary_cloud_name,
+	api_key: process.env.CLOUDINARY_API_KEY || process.env.cloudinary_api_key,
+	api_secret: process.env.CLOUDINARY_API_SECRET || process.env.cloudinary_api_secret,
 	secure: true,
 });
 
@@ -27,9 +27,4 @@ async function deleteFile(public_id) {
 	await cloudinary.v2.uploader.destroy(public_id);
 	return true;
 }
-const randImageName = (fileType, bytes = 32) => {
-	let ext = fileType.split("/")[1];
-	return crypto.randomBytes(bytes).toString("hex") + "." + ext;
-};
-
-module.exports = { getSecuredUrl, deleteFile, randImageName };
+module.exports = { getSecuredUrl, deleteFile };

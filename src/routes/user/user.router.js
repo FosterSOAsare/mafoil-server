@@ -19,7 +19,7 @@ userRouter.put("/details", user, controllerUpdateUserData);
 userRouter.put("/password", user, controllerUpdateUserPassword);
 userRouter.delete("", user, controllerDeleteAccount);
 userRouter.put("/newsletter", user, controllerUpdateNewsLetterSubscription);
-userRouter.get("/activate", user, controllerActivateAccount);
+userRouter.post("/activate", user, controllerActivateAccount);
 userRouter.post("/withdraw", user, controllerWithdrawFunds);
 userRouter.post("/deposit-checkout", user, controllerGenerateCheckoutSession);
 userRouter.put("/validate-checkout", user, controllerValidateCheckoutSession);

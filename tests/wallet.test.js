@@ -49,7 +49,7 @@ describe("admin withdrawal decisions", () => {
 		await as(t.api().post("/api/user/withdraw")).send({ amount: 30, address: "wallet-1" });
 		const txn = await Transaction.findOne({ user: user._id, status: "pending" });
 
-		expect((await as(t.api().put(`/api/transactions/${txn._id}/approve`))).status).toBe(401);
+		expect((await as(t.api().put(`/api/transactions/${txn._id}/approve`))).status).toBe(403);
 
 		const decisions = await Promise.all([asAdmin(t.api().put(`/api/transactions/${txn._id}/approve`)), asAdmin(t.api().put(`/api/transactions/${txn._id}/reject`))]);
 		expect(okCount(decisions)).toBe(1);
@@ -73,7 +73,7 @@ describe("cart and checkout", () => {
 		const product = await createProduct();
 		const { user, as } = await t.makeUser({ balance: 100 });
 		await as(t.api().post("/api/cart")).send({ cart: [{ id: product._id.toString(), count: 5 }] });
-		expect((await as(t.api().get("/api/cart/checkout"))).status).toBe(400);
+		expect((await as(t.api().post("/api/cart/checkout"))).status).toBe(400);
 		expect(await Cart.countDocuments({ user: user._id })).toBe(1);
 		expect(await Order.countDocuments({ user: user._id })).toBe(0);
 	});
@@ -82,7 +82,7 @@ describe("cart and checkout", () => {
 		const product = await createProduct();
 		const { user, as } = await t.makeUser({ balance: 100 });
 		await as(t.api().post("/api/cart")).send({ cart: [{ id: product._id.toString(), count: 1 }] });
-		const checkouts = await repeat(3, () => as(t.api().get("/api/cart/checkout")));
+		const checkouts = await repeat(3, () => as(t.api().post("/api/cart/checkout")));
 		expect(okCount(checkouts)).toBe(1);
 		expect(await t.balanceOf(user._id)).toBe(70);
 
@@ -94,7 +94,7 @@ describe("cart and checkout", () => {
 
 	test("inactive users cannot check out", async () => {
 		const { as } = await t.makeUser({ activated: false, balance: 500 });
-		const res = await as(t.api().get("/api/cart/checkout"));
+		const res = await as(t.api().post("/api/cart/checkout"));
 		expect(res.status).toBe(400);
 		expect(res.body.error).toMatch(/activated/i);
 	});
@@ -104,7 +104,7 @@ describe("activation", () => {
 	test("charges the fee once and pays the referrer once", async () => {
 		const { user: referrer } = await t.makeUser({ balance: 0 });
 		const { user, as } = await t.makeUser({ balance: 100, activated: false, referrer: referrer._id });
-		const responses = await repeat(3, () => as(t.api().get("/api/user/activate")));
+		const responses = await repeat(3, () => as(t.api().post("/api/user/activate")));
 		expect(okCount(responses)).toBe(1);
 		expect(await t.balanceOf(user._id)).toBe(60);
 		expect(await t.balanceOf(referrer._id)).toBe(3);
