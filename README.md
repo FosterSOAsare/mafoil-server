@@ -88,7 +88,7 @@ Create `server/.env` (it is git-ignored). Variables actually read by the code:
 | `PORT`                  |    | Port to listen on. Defaults to `8000`. |
 | `NODE_ENV`              |    | Set to `production` to enable secure cookies and the production CORS allow-list. |
 
-> `.env.example` also lists `JWT_SECRET` and `BASE_URL`. They are not read anywhere in the code — the JWT secret is `SECRET`.
+`.env.example` contains every variable with a short comment.
 
 Generate a strong secret with:
 
