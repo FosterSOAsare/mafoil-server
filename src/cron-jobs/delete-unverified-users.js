@@ -1,19 +1,15 @@
-const asyncHandler = require("express-async-handler");
 const User = require("../schemas/User.schema");
-const { checkElapsedTime } = require("../utils/checkElapsedTime");
 
-const deleteUnverifiedUser = asyncHandler(async () => {
-	// Fetch unverified users
-	const unverifiedUsers = await User.find({ $or: [{ verified: false }, { verified: { $exists: false } }] }, { createdAt: 1 });
+const MAX_UNVERIFIED_AGE_MS = 2 * 60 * 60 * 1000; // 2 hours
 
-	// Filter users whose registration date is more than 2 hours
-	let filtered = unverifiedUsers
-		.filter((user) => {
-			return checkElapsedTime(user.createdAt, 3600 * 2);
-		})
-		.map((user) => user._id);
-	await User.deleteMany({ _id: { $in: filtered } });
-	// console.log("All unverified email deleted completely...");
-});
+// Deletes accounts whose email was not verified within 2 hours of registering
+const deleteUnverifiedUser = async () => {
+	try {
+		const cutoff = new Date(Date.now() - MAX_UNVERIFIED_AGE_MS);
+		await User.deleteMany({ verified: { $ne: true }, createdAt: { $lt: cutoff } });
+	} catch (e) {
+		console.error("delete-unverified-users failed:", e.message);
+	}
+};
 
 module.exports = deleteUnverifiedUser;

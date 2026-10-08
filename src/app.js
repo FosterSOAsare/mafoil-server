@@ -1,28 +1,16 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
-const session = require("express-session");
 
 const error = require("./middlewares/error.middleware");
-const store = require("./libs/connect-mongo");
 
 // const helmet = require("helmet");
 const appRouter = require("./routes");
 
 const app = express();
+// Behind Render's proxy: use the first X-Forwarded-For hop as the client IP (needed for rate limiting)
+app.set("trust proxy", 1);
 app.use(express.json());
-
-let initialObj = {
-	secret: "thisisascretkeythatwillbechangedsoon",
-	resave: false,
-	saveUninitialized: false,
-	cookie: {
-		httpOnly: true,
-		sameSite: "strict",
-		secure: process.env?.NODE_ENV === "production",
-	},
-	store: store,
-};
 
 app.use(
 	cors({
@@ -30,7 +18,6 @@ app.use(
 	})
 );
 app.use(morgan("combined"));
-app.use(session(initialObj));
 app.use("/api", appRouter);
 
 app.get("/", (req, res) => {

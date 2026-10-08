@@ -26,4 +26,8 @@ const notificationSchema = mongoose.Schema(
 	}
 );
 
+// Used by the delete-read-notifications cron and by the user's notification list
+notificationSchema.index({ status: 1, createdAt: 1 });
+notificationSchema.index({ user: 1 });
+
 module.exports = mongoose.model("Notification", notificationSchema);

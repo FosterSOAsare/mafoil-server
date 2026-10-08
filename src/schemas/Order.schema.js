@@ -34,4 +34,8 @@ const orderSchema = mongoose.Schema(
 	{ timestamps: true }
 );
 
+// Used by the finalise-order cron and by the user's order list
+orderSchema.index({ status: 1, endDate: 1 });
+orderSchema.index({ user: 1, createdAt: -1 });
+
 module.exports = mongoose.model("Order", orderSchema);

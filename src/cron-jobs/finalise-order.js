@@ -1,58 +1,46 @@
-const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 
 const User = require("../schemas/User.schema");
 const Notification = require("../schemas/Notification.schema");
 const Order = require("../schemas/Order.schema");
 const Transaction = require("../schemas/Transaction.schema");
+const { roundMoney } = require("../utils/money");
 
-const finalizeOrder = asyncHandler(async () => {
-	// Find all pending order
-	const orders = await Order.find({ status: "pending" });
-	// Filter to get the elapsed time
-	let filtered = orders.filter((order) => {
-		let today = new Date().getTime();
-		let endDate = new Date(order?.endDate).getTime();
-		return endDate < today;
+const BATCH_SIZE = 100;
+
+// Completes one order and pays out price + profit. The pending -> completed update is conditional,
+// so an order can never be paid twice even if two runs overlap.
+async function completeOrder(orderId) {
+	await mongoose.connection.transaction(async (session) => {
+		const order = await Order.findOneAndUpdate({ _id: orderId, status: "pending" }, { $set: { status: "completed", completionDate: new Date() } }, { session, new: true });
+		if (!order) return; // Already completed or cancelled
+
+		const total = roundMoney(order.totalPrice + order.totalProfit);
+		await User.updateOne({ _id: order.user }, { $inc: { balance: total } }, { session });
+		await Transaction.create([{ type: "deposit", amount: total, status: "completed", desc: "Order finalization", user: order.user }], { session });
+		await Notification.create([{ link: `/orders/${order._id}`, user: order.user, desc: "Your order has been completed." }], { session });
 	});
+}
 
-	// Complete one order at a time
-	if (filtered?.length === 0) return;
-	let order = filtered[0];
-	const { user, _id, totalPrice, totalProfit } = order;
-	const total = Math.round((totalPrice + totalProfit) * 100) / 100;
-
-	const session = await mongoose.startSession();
+// Finalises every pending order whose end date has passed, in batches
+const finalizeOrder = async () => {
 	try {
-		session.startTransaction();
-		const options = { session };
-
-		// Update order to completed
-		await Order.updateOne({ _id }, { $set: { status: "completed" } }, options);
-
-		// Insert notification to notify of the completion
-		await Notification.create(
-			[
-				{ link: `/orders/${order._id}`, user, desc: "Your order has been completed." },
-				// { link: `/account/transactions`, user, desc: `You received a profit of ${totalProfit} from your order` },
-			],
-			options
-		);
-
-		// Insert a transaction
-		await Transaction.create([{ type: "deposit", amount: total, status: "completed", desc: "Order finalization", user }], options);
-
-		// Update user's balance
-		// await User.updateOne({ _id: user }, { $inc: { balance: total } }, options);
-
-		await session.commitTransaction();
-		session.endSession();
-
-		console.log("Order finalized successfully...");
+		const failed = []; // Skipped for the rest of this run so a failing order can't loop forever
+		let orders;
+		do {
+			orders = await Order.find({ status: "pending", endDate: { $lt: new Date() }, _id: { $nin: failed } }, { _id: 1 }).limit(BATCH_SIZE);
+			for (const { _id } of orders) {
+				try {
+					await completeOrder(_id);
+				} catch (e) {
+					failed.push(_id);
+					console.error(`finalise-order failed for order ${_id}:`, e.message);
+				}
+			}
+		} while (orders.length === BATCH_SIZE);
 	} catch (e) {
-		await session.abortTransaction();
-		session.endSession();
+		console.error("finalise-order failed:", e.message);
 	}
-});
+};
 
 module.exports = finalizeOrder;

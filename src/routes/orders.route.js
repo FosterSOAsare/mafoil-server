@@ -26,7 +26,7 @@ const getOrders = asyncHandler(async (req, res) => {
 	let { filter } = req.query;
 	filter = filter ? filter : "all";
 
-	let obj = { user: req.session.user._id };
+	let obj = { user: req.user._id };
 	if (filter !== "all") {
 		obj = { ...obj, status: filter };
 	}
@@ -64,7 +64,7 @@ const getAnOrder = asyncHandler(async (req, res) => {
 	}
 
 	// Users can only see their own orders; admins can see any order
-	const filter = req.session.user.is_admin ? { _id: orderId } : { _id: orderId, user: req.session.user._id };
+	const filter = req.user.is_admin ? { _id: orderId } : { _id: orderId, user: req.user._id };
 	let order = await Order.findOne(filter);
 	if (!order) {
 		res.status(404);
@@ -89,7 +89,7 @@ const getAnOrder = asyncHandler(async (req, res) => {
 
 const cancelAnOrder = asyncHandler(async (req, res) => {
 	const { orderId } = req.params;
-	const userId = req.session.user._id;
+	const userId = req.user._id;
 	if (!mongoose.isValidObjectId(orderId)) {
 		res.status(404);
 		throw new Error("Order was not found");

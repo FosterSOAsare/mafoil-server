@@ -4,7 +4,7 @@ const Newsletter = require("../schemas/Newsletter.schema");
 const jwt = require("jsonwebtoken");
 
 const user = asyncHandler(async (req, res, next) => {
-	// Jwts will be used here but the value from jwt will be passed to the express-session object
+	// Verifies the JWT and loads the user into req.user for the rest of the request
 	try {
 		if (!req?.headers?.authorization || !req.headers.authorization.startsWith("Bearer ")) {
 			res.status(401);
@@ -26,7 +26,7 @@ const user = asyncHandler(async (req, res, next) => {
 
 		const { email, fullname, activated, _id, balance, is_admin } = user;
 		const subscribed = await Newsletter.findOne({ email: email });
-		req.session.user = { email, fullname, activated, _id, balance, is_admin, subscribed: subscribed ? true : false };
+		req.user = { email, fullname, activated, _id, balance, is_admin, subscribed: subscribed ? true : false };
 	} catch (err) {
 		res.status(403).json({ error: err.message });
 		return;

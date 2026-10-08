@@ -100,4 +100,7 @@ userSchema.methods.updatePassword = async function (password) {
 	}
 };
 
+// Used by the delete-unverified-users cron
+userSchema.index({ verified: 1, createdAt: 1 });
+
 module.exports = mongoose.model("User", userSchema);

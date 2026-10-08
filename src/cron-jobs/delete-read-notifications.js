@@ -1,21 +1,14 @@
 const Notification = require("../schemas/Notification.schema");
-const { checkElapsedTime } = require("../utils/checkElapsedTime");
 
+const MAX_READ_AGE_MS = 48 * 60 * 60 * 1000; // 2 days
+
+// Deletes read notifications that are more than 2 days old
 const deleteReadNotifications = async () => {
 	try {
-		// Fetch notifications
-		const notifications = await Notification.find({ status: "read" }, { createdAt: 1 });
-
-		// Filter read notifications whose date is more than 2 days
-		let filtered = notifications
-			.filter((notification) => {
-				return checkElapsedTime(notification.createdAt, 3600 * 48);
-			})
-			.map((notification) => notification._id);
-		await Notification.deleteMany({ _id: { $in: filtered } });
-		// console.log("All read notifications deleted completely...");
+		const cutoff = new Date(Date.now() - MAX_READ_AGE_MS);
+		await Notification.deleteMany({ status: "read", createdAt: { $lt: cutoff } });
 	} catch (e) {
-		console.log(e.message);
+		console.error("delete-read-notifications failed:", e.message);
 	}
 };
 

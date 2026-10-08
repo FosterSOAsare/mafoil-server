@@ -9,7 +9,7 @@ const Product = require("../schemas/Products.schema");
 const wishlistRouter = express.Router();
 
 const getUserWishList = asyncHandler(async (req, res) => {
-	const userId = req.session.user._id;
+	const userId = req.user._id;
 	let wishlist = await WishList.findOne({ user: userId });
 
 	if (!wishlist) {
@@ -28,7 +28,7 @@ const getUserWishList = asyncHandler(async (req, res) => {
 });
 const insertUserWishlist = asyncHandler(async (req, res) => {
 	let { wishlist: wishlistData } = req.body;
-	const userId = req.session.user._id;
+	const userId = req.user._id;
 	if (!wishlistData || !Array.isArray(wishlistData)) {
 		throw new Error("Please include a wishlist to the request");
 	}
@@ -44,7 +44,7 @@ const insertUserWishlist = asyncHandler(async (req, res) => {
 		// Update wishlist
 		await WishList.updateOne({ _id: wishlist?._id }, { $set: { wishlist: wishlistData } });
 	} else {
-		await WishList.create({ wishlist: wishlistData, user: req.session.user?._id });
+		await WishList.create({ wishlist: wishlistData, user: req.user?._id });
 	}
 	res.status(200).json({ success: true });
 });

@@ -84,7 +84,7 @@ const moderateProductReview = asyncHandler(async (req, res) => {
 });
 
 const postAProductReview = asyncHandler(async (req, res) => {
-	const { fullname, email, _id } = req.session.user;
+	const { fullname, email, _id } = req.user;
 	let { title, rating, comment } = req.body;
 	if (!title || typeof rating !== "number" || !comment) {
 		res.status(400);
@@ -109,7 +109,7 @@ const postAProductReview = asyncHandler(async (req, res) => {
 
 		// Insert notification to tell user that their review has been received
 		let notif = await Notifications.create(
-			[{ link: `/products/${product?.slugname}`, user: req.session.user?._id, desc: `Your review on ${product?.name} has been received and is waiting for moderation.` }],
+			[{ link: `/products/${product?.slugname}`, user: req.user?._id, desc: `Your review on ${product?.name} has been received and is waiting for moderation.` }],
 			options
 		);
 

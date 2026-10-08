@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 
 const User = require("../../schemas/User.schema");
 const generateCode = require("../../utils/generateCode");
@@ -37,9 +38,6 @@ const controllerAuthLocalLogin = asyncHandler(async (req, res) => {
 	}
 
 	const { fullname, activated, _id, balance, subscribed, is_admin } = user;
-	// req.session.user = { _id };
-	// req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
-
 	// Set a jwt here
 	const token = jwt.sign({ userId: _id, email }, process.env.SECRET, {
 		expiresIn: "30d",
@@ -61,12 +59,9 @@ const controllerAuthLocalRegister = asyncHandler(async (req, res) => {
 		throw new Error("User already exists , please sign in");
 	}
 	// Create new user based on referrer
-	let refAccount = await User.findOne({ _id: referrer });
-	if (refAccount) {
-		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, activated: true, verified: false, referrer, is_admin: false });
-	} else {
-		user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, activated: true, verified: false, is_admin: false });
-	}
+	// New accounts start inactive and must pay the activation fee (/user/activate) before checking out
+	let refAccount = mongoose.isValidObjectId(referrer) ? await User.findOne({ _id: referrer }, { _id: 1 }) : null;
+	user = new User({ email: email.toLowerCase(), password: password, fullname: fullname, activated: false, verified: false, is_admin: false, ...(refAccount && { referrer: refAccount._id }) });
 
 	// Send email for verification , set code and save user
 	user = await controllerVerificationEmail(user, sendEmailVerificationEmail);
@@ -76,7 +71,7 @@ const controllerAuthLocalRegister = asyncHandler(async (req, res) => {
 });
 
 const verifyAuth = asyncHandler(async (req, res) => {
-	res.status(200).json(req?.session?.user);
+	res.status(200).json(req.user);
 });
 
 const controllerResetPassword = asyncHandler(async (req, res) => {
@@ -215,18 +210,16 @@ const controllerResendEmail = asyncHandler(async (req, res) => {
 });
 
 const controllerGetUser = asyncHandler(async (req, res) => {
-	res.status(200).json(req?.session.user);
+	res.status(200).json(req.user);
 });
 
 const controllerLogoutUser = asyncHandler(async (req, res) => {
-	if (req.session) {
-		let response = await req.session.destroy();
-		res.status(200).json({ success: true });
-	}
+	// Auth is a stateless JWT: the client discards the token, so there is nothing to destroy server-side
+	res.status(200).json({ success: true });
 });
 
 const controllerUpdateUserData = asyncHandler(async (req, res) => {
-	let userId = req.session.user._id;
+	let userId = req.user._id;
 	let { firstname, lastname } = req.body;
 	if (!firstname || !lastname) {
 		res.status(400);
@@ -236,19 +229,19 @@ const controllerUpdateUserData = asyncHandler(async (req, res) => {
 	await User.updateOne({ _id: userId }, { $set: { firstname, lastname } });
 
 	// Update session
-	req.session.user = { ...req.session.user, firstname, lastname };
+	req.user = { ...req.user, firstname, lastname };
 	res.status(200).json({ success: true });
 });
 
 const controllerUpdateUserPassword = asyncHandler(async (req, res) => {
-	let userId = req.session.user._id;
+	let userId = req.user._id;
 	let { password, newPassword } = req.body;
 	if (!password || !newPassword) {
 		res.status(400);
 		throw new Error("Please provide all information");
 	}
 
-	const user = await User.findOne({ _id: req.session.user._id });
+	const user = await User.findOne({ _id: req.user._id });
 
 	// Check password
 	let valid = await user.comparePassword(password);
@@ -267,12 +260,12 @@ const controllerUpdateUserPassword = asyncHandler(async (req, res) => {
 const controllerUpdateNewsLetterSubscription = asyncHandler(async (req, res) => {
 	let { subscription } = req.body;
 	if (!subscription) subscription = false;
-	await User.updateOne({ _id: req.session.user._id }, { newsletter: subscription });
+	await User.updateOne({ _id: req.user._id }, { newsletter: subscription });
 	res.status(200).json({ success: true });
 });
 
 const controllerDeleteAccount = asyncHandler(async (req, res) => {
-	// await User.deleteOne({ _id: req.session.user._id });
+	// await User.deleteOne({ _id: req.user._id });
 	res.status(200).json({ success: true });
 });
 

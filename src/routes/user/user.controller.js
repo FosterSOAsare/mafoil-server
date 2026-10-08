@@ -9,15 +9,17 @@ const { roundMoney, isPositiveAmount } = require("../../utils/money");
 const ACTIVATION_FEE = 40;
 const REFERRAL_BONUS = 3;
 const USD_TO_GHS = 12.78;
+const MIN_DEPOSIT_USD = 1;
+const MAX_DEPOSIT_USD = 10000;
 
 const stripe = require("stripe")(process.env.stripe_key);
 
 const controllerGetUser = asyncHandler(async (req, res) => {
-	res.status(200).json(req?.session.user);
+	res.status(200).json(req.user);
 });
 
 const controllerUpdateUserData = asyncHandler(async (req, res) => {
-	let userId = req.session.user._id;
+	let userId = req.user._id;
 	let { fullname } = req.body;
 	if (!fullname) {
 		res.status(400);
@@ -36,7 +38,7 @@ const controllerUpdateUserPassword = asyncHandler(async (req, res) => {
 		throw new Error("Please provide all information");
 	}
 
-	const user = await User.findOne({ _id: req.session.user._id });
+	const user = await User.findOne({ _id: req.user._id });
 
 	// Check password
 	let valid = await user.comparePassword(oldpassword);
@@ -55,17 +57,17 @@ const controllerUpdateUserPassword = asyncHandler(async (req, res) => {
 const controllerUpdateNewsLetterSubscription = asyncHandler(async (req, res) => {
 	let { subscription } = req.body;
 	if (!subscription) subscription = false;
-	await User.updateOne({ _id: req.session.user._id }, { newsletter: subscription });
+	await User.updateOne({ _id: req.user._id }, { newsletter: subscription });
 	res.status(200).json({ success: true });
 });
 
 const controllerDeleteAccount = asyncHandler(async (req, res) => {
-	await User.deleteOne({ _id: req.session.user._id });
+	await User.deleteOne({ _id: req.user._id });
 	res.status(200).json({ success: true });
 });
 
 const controllerActivateAccount = asyncHandler(async (req, res) => {
-	const userId = req.session.user._id;
+	const userId = req.user._id;
 
 	await mongoose.connection.transaction(async (session) => {
 		// Charge the fee and activate in one atomic update, so concurrent requests cannot both succeed
@@ -94,7 +96,7 @@ const controllerActivateAccount = asyncHandler(async (req, res) => {
 });
 
 const controllerWithdrawFunds = asyncHandler(async (req, res) => {
-	const userId = req.session.user._id;
+	const userId = req.user._id;
 	let { amount, address } = req.body;
 
 	if (!isPositiveAmount(amount) || roundMoney(amount) < 0.01) {
@@ -115,13 +117,14 @@ const controllerWithdrawFunds = asyncHandler(async (req, res) => {
 			throw new HttpError(400, "You have insufficient funds to complete the transaction");
 		}
 
-		await Transaction.create([{ type: "withdraw", amount, status: "completed", desc: "Withdrawal from account", user: userId, address }], { session });
+		// The amount is held (deducted) now; an admin approves the payout or rejects it, which refunds it
+		await Transaction.create([{ type: "withdraw", amount, status: "pending", desc: "Withdrawal from account", user: userId, address }], { session });
 		await Notification.create(
 			[
 				{
 					link: "/account/transactions",
 					user: userId,
-					desc: `Your withdrawal request of GH₵${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} was successful...`,
+					desc: `Your withdrawal request of GH₵${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been received and is awaiting approval.`,
 				},
 			],
 			{ session }
@@ -133,6 +136,11 @@ const controllerWithdrawFunds = asyncHandler(async (req, res) => {
 
 const controllerGenerateCheckoutSession = asyncHandler(async (req, res) => {
 	const { amount } = req.body;
+	// Whole cents only, within the allowed range
+	if (!isPositiveAmount(amount) || amount < MIN_DEPOSIT_USD || amount > MAX_DEPOSIT_USD || Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-6) {
+		res.status(400);
+		throw new Error(`Please enter an amount between $${MIN_DEPOSIT_USD} and $${MAX_DEPOSIT_USD.toLocaleString("en-US")} with at most 2 decimal places`);
+	}
 
 	const session = await stripe.checkout.sessions.create({
 		payment_method_types: ["card"],
@@ -144,24 +152,24 @@ const controllerGenerateCheckoutSession = asyncHandler(async (req, res) => {
 						name: `Deposit of funds`,
 						description: `User is depositing such amount into his wallet on mafo.il`,
 					},
-					unit_amount: 100 * amount, // Amount in cents
+					unit_amount: Math.round(amount * 100), // Amount in cents
 				},
 				quantity: 1,
 			},
 		],
 		mode: "payment",
+		// Ties the session to this user so nobody else can claim the payment
+		client_reference_id: req.user._id.toString(),
 		// {CHECKOUT_SESSION_ID} is a template for getting the session_id
 		success_url: `${process.env.CLIENT_URL}/account/transactions?status=deposit&session_id={CHECKOUT_SESSION_ID}`,
 		cancel_url: `${process.env.CLIENT_URL}/account/transactions?status=error`,
 	});
 
-	// Store session.id so that it can be retrieved later for verification
-
 	res.json({ url: session.url });
 });
 
 const controllerValidateCheckoutSession = asyncHandler(async (req, res) => {
-	const userId = req.session.user._id;
+	const userId = req.user._id;
 	const { sessionId } = req.body;
 	if (typeof sessionId !== "string" || !sessionId) {
 		res.status(400);
@@ -169,6 +177,10 @@ const controllerValidateCheckoutSession = asyncHandler(async (req, res) => {
 	}
 
 	const checkoutSession = await stripe.checkout.sessions.retrieve(sessionId);
+	if (checkoutSession.client_reference_id !== userId.toString()) {
+		res.status(403);
+		throw new Error("This checkout session does not belong to your account");
+	}
 	if (checkoutSession.payment_status !== "paid") {
 		res.status(400);
 		throw new Error("The session was not completed since user didn't make payment");

@@ -33,13 +33,13 @@ async function getPopulatedCart(userId, session) {
 }
 
 const getUserCart = asyncHandler(async (req, res) => {
-	const { populatedCart } = await getPopulatedCart(req.session.user._id);
+	const { populatedCart } = await getPopulatedCart(req.user._id);
 	res.status(200).json(populatedCart);
 });
 
 const insertUserCart = asyncHandler(async (req, res) => {
 	let { cart: cartData } = req.body;
-	const userId = req.session.user._id;
+	const userId = req.user._id;
 
 	if (!Array.isArray(cartData)) {
 		res.status(400);
@@ -59,7 +59,7 @@ const insertUserCart = asyncHandler(async (req, res) => {
 });
 
 const checkoutCart = asyncHandler(async (req, res) => {
-	const userId = req.session.user._id;
+	const userId = req.user._id;
 	let order;
 	let totalPrice;
 

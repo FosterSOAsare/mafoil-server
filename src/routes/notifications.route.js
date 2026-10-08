@@ -7,7 +7,7 @@ const Notification = require("../schemas/Notification.schema");
 const notificationsRouter = express.Router();
 
 const controllerGetNotifications = asyncHandler(async (req, res) => {
-	const notifications = await Notification.find({ user: req.session.user._id }, { __v: 0, updatedAt: 0, createdAt: 0, user: 0 }).sort({ createdAt: -1 });
+	const notifications = await Notification.find({ user: req.user._id }, { __v: 0, updatedAt: 0, createdAt: 0, user: 0 }).sort({ createdAt: -1 });
 
 	// Group notifications based on status
 	let priority = { read: 2, unread: 1 };
@@ -25,7 +25,7 @@ const controllerMarkNotificationAsRead = asyncHandler(async (req, res) => {
 
 	// Scoped to the logged-in user, so other users' notifications can't be read or changed
 	const notification = await Notification.findOneAndUpdate(
-		{ _id: notificationId, user: req.session.user._id },
+		{ _id: notificationId, user: req.user._id },
 		{ $set: { status: "read" } },
 		{ new: true, projection: { __v: 0, updatedAt: 0, createdAt: 0, user: 0 } }
 	);

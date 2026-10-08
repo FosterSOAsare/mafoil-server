@@ -22,7 +22,7 @@ const controllerModerateNewsletterSubscription = asyncHandler(async (req, res) =
 		throw new Error("Please provide a valid email address");
 	}
 	const unsubscribe = moderation === "unsub";
-	if (unsubscribe && email !== req.session.user.email.toLowerCase()) {
+	if (unsubscribe && email !== req.user.email.toLowerCase()) {
 		res.status(403);
 		throw new Error("You can only unsubscribe your own email address");
 	}
