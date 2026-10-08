@@ -1,5 +1,5 @@
 # Use a smaller image for the runtime
-FROM node:16-slim
+FROM node:24-slim
 
 # Set the working directory in the container
 WORKDIR /app
