@@ -44,7 +44,7 @@ The companion frontend lives in [`../client`](../client/README.md).
 
 ## Requirements
 
-- **Node.js 20 or newer** (bcrypt 6 needs Node 18+, and `npm run dev` uses `node --watch`)
+- **Node.js 24** — pinned in `.nvmrc` and `package.json` `engines` (run `nvm use` in this folder)
 - A **MongoDB** database. A replica set is required (MongoDB Atlas works out of the box), because checkout, cancellations, activation and review moderation use multi-document transactions.
 - A **Stripe** account (secret key) for deposits
 - A **Cloudinary** account for product images
@@ -324,9 +324,10 @@ docker build -t mafoil-server .
 docker run --env-file .env -p 8000:8000 mafoil-server
 ```
 
+The image is based on `node:24-slim`.
+
 Before building the image:
 
-- Change the base image from `node:16-slim` to **`node:20-slim`** — bcrypt 6 does not support Node 16.
 - The Dockerfile currently copies `.env` into the image. Prefer passing variables at runtime with `--env-file` (as above) and removing the `COPY /.env` line, so secrets are not baked into the image.
 
 ### CORS
@@ -337,7 +338,7 @@ In production (`NODE_ENV=production`) only `https://mafoil.vercel.app` and `http
 
 | Problem | Fix |
 | ------- | --- |
-| `Cannot find module …` on start | Run `npm install`. Make sure you are on Node 20+. |
+| `Cannot find module …` on start | Run `npm install`. Make sure you are on Node 24 (`nvm use`). |
 | `Transaction numbers are only allowed on a replica set member or mongos` | Use a replica set (e.g. MongoDB Atlas or a local single-node replica set). |
 | Every authenticated request returns `403` / `jwt malformed` | Check the `Authorization: Bearer <token>` header, and that `SECRET` matches the one used to sign the token. |
 | Verification emails are not sent | Check the SMTP variables; the transport uses port 465 with TLS. |
