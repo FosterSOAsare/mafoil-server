@@ -1,5 +1,6 @@
 require("dotenv").config();
 function errors(err, req, res, next) {
+	if (err?.status) res.status(err.status);
 	res.statusCode === 200 && res.status(500);
 	let errs = ["InternalOAuthError", "TokenError", "AuthenticationError", "AuthorizationError", "ValidationError", "ProviderError"];
 	if (err) {

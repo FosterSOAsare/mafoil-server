@@ -2,7 +2,7 @@
 
 REST API for **Mafo.il**, an e-commerce store with a built-in wallet. Users deposit funds through Stripe, buy products with their wallet balance, and track orders that are finalised automatically by scheduled jobs. Admins manage products, moderate reviews and view all orders and transactions.
 
-The companion frontend lives in [`../client`](../client/README.md).
+The companion frontend lives in a separate repository: [FosterSOAsare/mafoil-client](https://github.com/FosterSOAsare/mafoil-client).
 
 ---
 
@@ -53,7 +53,8 @@ The companion frontend lives in [`../client`](../client/README.md).
 ## Getting started
 
 ```bash
-cd server
+git clone https://github.com/FosterSOAsare/mafoil-server.git
+cd mafoil-server
 npm install
 cp .env.example .env     # then fill in the values (see below)
 npm run dev              # starts on http://localhost:8000 and restarts on file changes
@@ -66,7 +67,7 @@ curl http://localhost:8000/
 # {"success":true}
 ```
 
-The client's dev server proxies `/api/*` to `http://localhost:8000`, so run both together during development.
+The [client](https://github.com/FosterSOAsare/mafoil-client) calls this API directly at `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`), so run both together during development. In production the client's origin must be in the CORS allow-list (see [CORS](#cors)).
 
 ## Environment variables
 

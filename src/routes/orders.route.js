@@ -11,6 +11,7 @@ const User = require("../schemas/User.schema");
 const ordersRouter = express.Router();
 const Transaction = require("../schemas/Transaction.schema");
 const Notification = require("../schemas/Notification.schema");
+const HttpError = require("../utils/http-error");
 
 function createPercentage(createdAt, endDate) {
 	let today = new Date().getTime();
@@ -77,50 +78,43 @@ const getAnOrder = asyncHandler(async (req, res) => {
 });
 
 const cancelAnOrder = asyncHandler(async (req, res) => {
-	const order = await Order.findOne({ _id: req.params.orderId });
+	const { orderId } = req.params;
+	const userId = req.session.user._id;
+	if (!mongoose.isValidObjectId(orderId)) {
+		res.status(404);
+		throw new Error("Order was not found");
+	}
 
+	// Only the owner's orders are visible here
+	const order = await Order.findOne({ _id: orderId, user: userId });
 	if (!order) {
 		res.status(404);
 		throw new Error("Order was not found");
 	}
 	if (order.status !== "pending") {
-		res.status(404);
+		res.status(400);
 		throw new Error("Finalized orders cannot be canceled");
 	}
 
-	if (!order.user.equals(req.session.user._id)) {
-		res.status(404);
-		throw new Error("User is not authorized to perform this action");
-	}
-
-	const percent = createPercentage(order?.createdAt, order?.endDate);
+	const percent = createPercentage(order.createdAt, order.endDate);
 	if (percent > 10) {
-		res.status(404);
+		res.status(400);
 		throw new Error("Order cannot be cancelled. The specified time for refund has elapsed");
 	}
 
-	// Cancel order
+	await mongoose.connection.transaction(async (session) => {
+		// Flip pending -> cancelled atomically, so the order can only be refunded once
+		const cancelled = await Order.findOneAndUpdate({ _id: orderId, user: userId, status: "pending" }, { $set: { status: "cancelled" } }, { session, new: true });
+		if (!cancelled) {
+			throw new HttpError(409, "This order has already been finalized or cancelled");
+		}
 
-	const session = await mongoose.startSession();
-	try {
-		session.startTransaction();
-		const options = { session };
-		// Update balance
-		await Order.updateOne({ _id: req.params.orderId }, { $set: { status: "cancelled" } }, options);
-		// Add new balance
-		await User.updateOne({ _id: order?.user }, { $inc: { balance: order?.totalPrice } }, options);
-		// Add a transaction and notification for refund
-		await Transaction.create([{ type: "deposit", status: "completed", amount: order?.totalPrice, desc: "Order cancellation", user: req.session.user._id }], options);
-		await Notification.create([{ link: `/orders/${order?._id}`, desc: "Your order has been refunded", user: req.session.user._id }], options);
-		await session.commitTransaction();
-		session.endSession();
-		res.status(200).json({ success: true });
-	} catch (e) {
-		await session.abortTransaction();
-		session.endSession();
-		res.status(400);
-		throw new Error("An error occurred while cancelling order");
-	}
+		await User.updateOne({ _id: userId }, { $inc: { balance: cancelled.totalPrice } }, { session });
+		await Transaction.create([{ type: "deposit", status: "completed", amount: cancelled.totalPrice, desc: "Order cancellation", user: userId }], { session });
+		await Notification.create([{ link: `/orders/${cancelled._id}`, desc: "Your order has been refunded", user: userId }], { session });
+	});
+
+	res.status(200).json({ success: true });
 });
 ordersRouter.get("/", user, getOrders);
 ordersRouter.get("/admin", user, admin, getAllOrders);

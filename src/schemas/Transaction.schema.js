@@ -27,7 +27,9 @@ const transactionSchema = mongoose.Schema(
 			type: String,
 		},
 		session: {
+			// Stripe checkout session id. Unique so the same deposit can never be credited twice
 			type: String,
+			index: { unique: true, sparse: true },
 		},
 	},
 	{
